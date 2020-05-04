@@ -47,6 +47,7 @@ func (c *Client) idGenerator(role string) string {
 
 func (c *Client) sendJson(v interface{}) {
 	if err := c.conn.WriteJSON(v); err != nil {
+		fmt.Println(err)
 		//TODO:
 	}
 }
@@ -122,13 +123,15 @@ func (c *Client) handleMessage(message []byte) {
 			}
 
 			c.responseClient(requestMes.Id, responseParams)
-			c.subscribeNATS()
 
 			c.publish2Session("join", jsonMap{
 				"metadata": c.metadata,
 				"pub":      c.isPub,
 				"sub":      c.isSub,
 			})
+
+			c.subscribeNATS()
+
 		case "dtls":
 			c.requestMedia("dtls", jsonMap{
 				"transportId":    requestMes.Params.Data["transportId"],
@@ -231,23 +234,19 @@ type natsSubscribedMessage struct {
 	Data    jsonMap `json:"data"`
 }
 
-type SenderInfo struct {
-	Id       string      `json:"id"`
-	Metadata interface{} `json:"metadata"`
-}
-
 func (c *Client) notifySenders(tokenId string) {
 
 	transportId := c.idGenerator("pub")
 	sendersData := c.requestMedia("senders", jsonMap{
 		"transportId": transportId,
 	})
-	senders := sendersData["senders"].([]SenderInfo)
+	senders := sendersData["senders"].([]interface{})
 
 	for _, s := range senders {
+		sender := s.(jsonMap)
 		c.publish2One(tokenId, "publish", jsonMap{
-			"senderId": s.Id,
-			"metadata": s.Metadata,
+			"senderId": sender["id"],
+			"metadata": sender["metadata"],
 		})
 	}
 }
@@ -256,7 +255,7 @@ func (c *Client) notifySender2Client(tokenId string, senderId string, metadata i
 	transportId := c.idGenerator("sub")
 	subData := c.requestMedia("subscribe", jsonMap{
 		"transportId": transportId,
-		"sender":      senderId,
+		"senderId":      senderId,
 	})
 
 	c.notification("publish", jsonMap{
@@ -276,7 +275,66 @@ func (c *Client) subscribeNATS() {
 		fmt.Printf("Received a message: %s\n", string(m.Data))
 
 		var msg natsSubscribedMessage
-		err := json.Unmarshal(m.Data, &jsonMap{})
+		err := json.Unmarshal(m.Data, &msg)
+		if err != nil {
+			//TODO(CC): error
+			fmt.Println(err)
+		}
+
+		tokenId := msg.TokenId
+		switch msg.Method {
+		case "join":
+			metadata := msg.Data["metadata"]
+			sub := msg.Data["sub"].(bool)
+
+			c.notification("join", jsonMap{
+				"tokenId":  tokenId,
+				"metadata": metadata,
+			})
+
+			c.publish2One(tokenId, "join", jsonMap{
+				"metadata": c.metadata,
+				"pub":      c.isPub,
+				"sub":      c.isSub,
+			})
+
+			if c.isPub && sub {
+				c.notifySenders(tokenId)
+			}
+
+		case "leave":
+			c.notification("leave", jsonMap{
+				"tokenId": tokenId,
+			})
+		case "publish":
+			senderId := msg.Data["senderId"].(string)
+			metadata := msg.Data["metadata"]
+			c.notifySender2Client(tokenId, senderId, metadata)
+		case "unpublish":
+			c.notification("unpublish", jsonMap{
+				"senderId": msg.Data["senderId"],
+				"tokenId":  tokenId,
+			})
+		case "pause":
+			c.notification("pause", jsonMap{
+				"senderId": msg.Data["senderId"],
+			})
+		case "resume":
+			c.notification("resume", jsonMap{
+				"senderId": msg.Data["senderId"],
+			})
+		}
+
+	})
+	c.selfSub = selfSub
+
+	sessionSubject := fmt.Sprintf("%s.@", c.sessionId)
+	//TODO(CC): error
+	sessionSub, _ := c.clientGroup.nc.Subscribe(sessionSubject, func(m *nats.Msg) {
+		fmt.Printf("Received a session message: %s\n", string(m.Data))
+
+		var msg natsSubscribedMessage
+		err := json.Unmarshal(m.Data, &msg)
 		if err != nil {
 			//TODO(CC): error
 			fmt.Println(err)
@@ -294,74 +352,17 @@ func (c *Client) subscribeNATS() {
 					"metadata": metadata,
 				})
 
-				c.publish2One(tokenId, "join", jsonMap{
-					"metadata": c.metadata,
-					"pub":      c.isPub,
-					"sub":      c.isSub,
-				})
-
 				if c.isPub && sub {
 					c.notifySenders(tokenId)
 				}
-
-			case "leave":
-				c.notification("leave", jsonMap{
-					"tokenId": tokenId,
-				})
 			case "publish":
 				senderId := msg.Data["senderId"].(string)
 				metadata := msg.Data["metadata"]
 				c.notifySender2Client(tokenId, senderId, metadata)
-			case "unpublish":
-				c.notification("unpublish", jsonMap{
-					"senderId": msg.Data["senderId"],
-					"tokenId":  tokenId,
-				})
-			case "pause":
-				c.notification("pause", jsonMap{
-					"senderId": msg.Data["senderId"],
-				})
-			case "resume":
-				c.notification("resume", jsonMap{
-					"senderId": msg.Data["senderId"],
-				})
+
 			}
 		}
-	})
-	c.selfSub = selfSub
 
-	sessionSubject := fmt.Sprintf("%s.@", c.sessionId)
-	//TODO(CC): error
-	sessionSub, _ := c.clientGroup.nc.Subscribe(sessionSubject, func(m *nats.Msg) {
-		fmt.Printf("Received a message: %s\n", string(m.Data))
-
-		var msg natsSubscribedMessage
-		err := json.Unmarshal(m.Data, &jsonMap{})
-		if err != nil {
-			//TODO(CC): error
-			fmt.Println(err)
-		}
-
-		tokenId := msg.TokenId
-		switch msg.Method {
-		case "join":
-			metadata := msg.Data["metadata"]
-			sub := msg.Data["sub"].(bool)
-
-			c.notification("join", jsonMap{
-				"tokenId":  tokenId,
-				"metadata": metadata,
-			})
-
-			if c.isPub && sub {
-				c.notifySenders(tokenId)
-			}
-		case "publish":
-			senderId := msg.Data["senderId"].(string)
-			metadata := msg.Data["metadata"]
-			c.notifySender2Client(tokenId, senderId, metadata)
-
-		}
 	})
 	c.sessionSub = sessionSub
 }
@@ -442,7 +443,7 @@ func (c *Client) WritePump() {
 				return
 			}
 
-		case message, ok := <-c.recv://TODO: move this case to a single select
+		case message, ok := <-c.recv: //TODO: move this case to a single select
 			if !ok {
 				//TODO(CC):
 			}
