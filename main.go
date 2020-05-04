@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/0-u-0/dugon-signal-server/libs"
 	"github.com/spf13/viper"
 )
 
@@ -17,16 +18,14 @@ func main() {
 	}
 
 	port := viper.GetInt("port")
-	//httpsEnable := viper.GetBool("https_enable")
-	//cert := viper.GetString("cert")
-	//key := viper.GetString("key")
+	httpsEnable := viper.GetBool("https_enable")
+	cert := viper.GetString("cert")
+	key := viper.GetString("key")
 	natsUrls := viper.GetStringSlice("nats_urls")
 
+	fmt.Println(viper.AllSettings())
 
-	fmt.Println(port)
-	fmt.Println(natsUrls)
-
-	//clientGroup := libs.NewClientGroup()
-	//go clientGroup.Run()
-	//libs.InitWsServer(clientGroup)
+	clientGroup := libs.NewClientGroup(natsUrls)
+	go clientGroup.Run()
+	libs.InitWsServer(clientGroup, port, httpsEnable, cert, key)
 }

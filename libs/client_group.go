@@ -8,6 +8,7 @@ import (
 	"github.com/nats-io/nats.go"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -20,13 +21,15 @@ type ClientGroup struct {
 	nc *nats.EncodedConn
 }
 
-func NewClientGroup() *ClientGroup {
+func NewClientGroup(natsUrls []string) *ClientGroup {
 	g := &ClientGroup{
 		clients:    make(map[*Client]bool),
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
 	}
-	nc, err := nats.Connect(nats.DefaultURL)
+
+	natsUrl := strings.Join(natsUrls, " ,")
+	nc, err := nats.Connect(natsUrl)
 	if err != nil {
 
 	}
@@ -45,7 +48,7 @@ func (g *ClientGroup) Run() {
 			g.clients[client] = true
 		case client := <-g.unregister:
 			if _, ok := g.clients[client]; ok {
-				fmt.Printf("%s client close\n",client.tokenId)
+				fmt.Printf("%s client close\n", client.tokenId)
 				delete(g.clients, client)
 			}
 		}
@@ -56,8 +59,9 @@ type wsHandler struct {
 	clientGroup *ClientGroup
 }
 
-func InitWsServer(g *ClientGroup) {
-	address := fmt.Sprintf(":%d", 8800)
+func InitWsServer(g *ClientGroup, port int, httpsEnable bool,
+	crtPath string, keyPath string) {
+	address := fmt.Sprintf(":%d", port)
 
 	s := &http.Server{
 		Addr: address,
@@ -69,7 +73,11 @@ func InitWsServer(g *ClientGroup) {
 		MaxHeaderBytes: 1 << 20,
 	}
 
-	s.ListenAndServe()
+	if httpsEnable {
+		fmt.Println(s.ListenAndServeTLS(crtPath, keyPath))
+	} else {
+		fmt.Println(s.ListenAndServe())
+	}
 }
 
 func (handler wsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
