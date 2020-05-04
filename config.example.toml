@@ -1,0 +1,8 @@
+
+port = 8800
+https_enable = false
+cert = "./cert/server.crt"
+key = "./cert/server.key"
+nats_urls = [
+  "'nats://127.0.0.1:4222'"
+]
