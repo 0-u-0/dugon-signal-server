@@ -7,6 +7,8 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/nats-io/nats.go"
 	"log"
+	"math/rand"
+	"reflect"
 	"time"
 )
 
@@ -31,6 +33,8 @@ type Client struct {
 	recv        chan []byte
 	selfSub     *nats.Subscription
 	sessionSub  *nats.Subscription
+	//FIXME: maybe pub,sub use different mediaserver
+	mediaServer *MediaServer
 }
 
 type requestParams struct {
@@ -39,6 +43,7 @@ type requestParams struct {
 	Metadata  map[string]string `json:"metadata"`
 }
 
+//TODO(CC): use random id
 func (c *Client) idGenerator(role string) string {
 	data := []byte(fmt.Sprintf("%s@%s@%s", c.sessionId, c.tokenId, role))
 	has := md5.Sum(data)
@@ -76,6 +81,23 @@ func (c *Client) responseClientWithoutData(id int) {
 	c.responseClient(id, map[string]string{})
 }
 
+func (c *Client) setMediaServer() {
+	//
+	if len(c.clientGroup.mediaServers) > 0 {
+		if c.mediaServer == nil {
+			rand.Seed(time.Now().Unix())
+			keys := reflect.ValueOf(c.clientGroup.mediaServers).MapKeys()
+			randId := keys[rand.Intn(len(keys))].String()
+			ms, ok := c.clientGroup.mediaServers[randId]
+			if ok {
+				c.mediaServer = ms
+			}
+		}
+	} else {
+		//TODO(CC): no media server
+	}
+}
+
 func (c *Client) handleMessage(message []byte) {
 	var requestMes *RequestMessage
 	jsonErr := json.Unmarshal(message, &requestMes)
@@ -91,6 +113,9 @@ func (c *Client) handleMessage(message []byte) {
 		case "join":
 			pub := requestMes.Params.Data["pub"].(bool)
 			sub := requestMes.Params.Data["sub"].(bool)
+
+			//FIXME: ...
+			c.setMediaServer()
 
 			codecData := c.requestMediaNoParams("codecs")
 
@@ -255,7 +280,7 @@ func (c *Client) notifySender2Client(tokenId string, senderId string, metadata i
 	transportId := c.idGenerator("sub")
 	subData := c.requestMedia("subscribe", jsonMap{
 		"transportId": transportId,
-		"senderId":      senderId,
+		"senderId":    senderId,
 	})
 
 	c.notification("publish", jsonMap{
@@ -372,7 +397,9 @@ func (c *Client) requestMedia(method string, params jsonMap) jsonMap {
 	request := MediaRequest{Method: method, Params: params}
 
 	var response MediaResponse
-	err := c.clientGroup.nc.Request("media@", request, &response, 10*time.Second)
+
+	mediaSubject := fmt.Sprintf("media.%s", c.mediaServer.Id)
+	err := c.clientGroup.nc.Request(mediaSubject, request, &response, 10*time.Second)
 	if err != nil {
 		fmt.Printf("Request failed: %v\n", err)
 	}

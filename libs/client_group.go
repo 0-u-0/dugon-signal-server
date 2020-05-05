@@ -12,6 +12,14 @@ import (
 	"time"
 )
 
+type MediaServer struct {
+	Id      string `json:"id"`
+	Area    string `json:"area"`
+	Host    string `json:"host"`
+	Name    string `json:"name"`
+	isAlive bool
+}
+
 type ClientGroup struct {
 	clients map[*Client]bool
 
@@ -19,29 +27,56 @@ type ClientGroup struct {
 	unregister chan *Client
 
 	nc *nats.EncodedConn
+
+	mediaServers map[string]*MediaServer
 }
 
 func NewClientGroup(natsUrls []string) *ClientGroup {
 	g := &ClientGroup{
-		clients:    make(map[*Client]bool),
-		register:   make(chan *Client),
-		unregister: make(chan *Client),
+		clients:      make(map[*Client]bool),
+		register:     make(chan *Client),
+		unregister:   make(chan *Client),
+		mediaServers: make(map[string]*MediaServer),
 	}
 
 	natsUrl := strings.Join(natsUrls, " ,")
+	//FIXME: maybe useful
 	nc, err := nats.Connect(natsUrl)
 	if err != nil {
-
+		fmt.Println(err)
 	}
 	c, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER)
 	if err != nil {
-
+		fmt.Println(err)
 	}
 	g.nc = c
+
+	g.nc.Subscribe("media@heartbeat", func(m *nats.Msg) {
+		//fmt.Println(string(m.Data))
+		var info = &MediaServer{}
+		err := json.Unmarshal(m.Data, info)
+		if err != nil {
+			//TODO(CC): error
+			fmt.Printf("error %s", err)
+		}
+
+		if media, ok := g.mediaServers[info.Id]; ok {
+			//keepalive
+			media.isAlive = true
+		} else {
+			fmt.Printf("%s register\n", info.Name)
+			info.isAlive = true
+			g.mediaServers[info.Id] = info
+		}
+	})
+
 	return g
 }
 
 func (g *ClientGroup) Run() {
+	t := time.NewTicker(3 * time.Second)
+	defer t.Stop()
+
 	for {
 		select {
 		case client := <-g.register:
@@ -50,6 +85,15 @@ func (g *ClientGroup) Run() {
 			if _, ok := g.clients[client]; ok {
 				fmt.Printf("%s client close\n", client.tokenId)
 				delete(g.clients, client)
+			}
+		case <-t.C:
+			for i, e := range g.mediaServers {
+				if e.isAlive {
+					e.isAlive = false
+				} else {
+					fmt.Printf("media server {%s} died\n", e.Name)
+					delete(g.mediaServers, i)
+				}
 			}
 		}
 	}
