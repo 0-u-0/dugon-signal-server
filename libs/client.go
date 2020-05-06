@@ -1,9 +1,9 @@
 package libs
 
 import (
-	"crypto/md5"
 	"encoding/json"
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/nats-io/nats.go"
 	"log"
@@ -28,8 +28,10 @@ type Client struct {
 	metadata    map[string]string
 	isPub       bool
 	isSub       bool
+	pubTransId  string
+	subTransId  string
 	conn        *websocket.Conn
-	send        chan []byte
+	send        chan interface{}
 	recv        chan []byte
 	selfSub     *nats.Subscription
 	sessionSub  *nats.Subscription
@@ -44,18 +46,18 @@ type requestParams struct {
 }
 
 //TODO(CC): use random id
-func (c *Client) idGenerator(role string) string {
-	data := []byte(fmt.Sprintf("%s@%s@%s", c.sessionId, c.tokenId, role))
-	has := md5.Sum(data)
-	return fmt.Sprintf("%x", has)
-}
+//func (c *Client) idGenerator(role string) string {
+//	data := []byte(fmt.Sprintf("%s@%s@%s", c.sessionId, c.tokenId, role))
+//	has := md5.Sum(data)
+//	return fmt.Sprintf("%x", has)
+//}
 
-func (c *Client) sendJson(v interface{}) {
-	if err := c.conn.WriteJSON(v); err != nil {
-		fmt.Println(err)
-		//TODO:
-	}
-}
+//func (c *Client) sendJson(v interface{}) {
+//	if err := c.conn.WriteJSON(v); err != nil {
+//		fmt.Println(err)
+//		//TODO:
+//	}
+//}
 
 func (c *Client) responseClient(id int, params interface{}) {
 	response := jsonMap{
@@ -63,7 +65,8 @@ func (c *Client) responseClient(id int, params interface{}) {
 		"id":     id,
 		"params": params,
 	}
-	c.sendJson(response)
+	c.send <- response
+	//c.sendJson(response)
 }
 
 func (c *Client) notification(event string, data interface{}) {
@@ -74,7 +77,8 @@ func (c *Client) notification(event string, data interface{}) {
 			"data":  data,
 		},
 	}
-	c.sendJson(response)
+	//c.sendJson(response)
+	c.send <- response
 }
 
 func (c *Client) responseClientWithoutData(id int) {
@@ -125,10 +129,12 @@ func (c *Client) handleMessage(message []byte) {
 
 			if pub {
 				c.isPub = true
-				transportId := c.idGenerator("pub")
+
+				transportId, _ := uuid.NewUUID()
+				c.pubTransId = transportId.String()
 
 				mediaRequest := jsonMap{
-					"transportId": transportId,
+					"transportId": c.pubTransId,
 					"role":        "pub",
 				}
 				pubData := c.requestMedia("transport", mediaRequest)
@@ -137,10 +143,12 @@ func (c *Client) handleMessage(message []byte) {
 
 			if sub {
 				c.isSub = true
-				transportId := c.idGenerator("sub")
+
+				transportId, _ := uuid.NewUUID()
+				c.subTransId = transportId.String()
 
 				mediaRequest := map[string]interface{}{
-					"transportId": transportId,
+					"transportId": c.subTransId,
 					"role":        "sub",
 				}
 				pubData := c.requestMedia("transport", mediaRequest)
@@ -236,7 +244,7 @@ type MediaResponse struct {
 func (c *Client) publish2Session(method string, data jsonMap) {
 	sessionSubject := fmt.Sprintf("%s.@", c.sessionId)
 
-	c.clientGroup.nc.Publish(sessionSubject, map[string]interface{}{
+	c.clientGroup.nc.Publish(sessionSubject, jsonMap{
 		"tokenId": c.tokenId,
 		"method":  method,
 		"data":    data,
@@ -261,9 +269,8 @@ type natsSubscribedMessage struct {
 
 func (c *Client) notifySenders(tokenId string) {
 
-	transportId := c.idGenerator("pub")
 	sendersData := c.requestMedia("senders", jsonMap{
-		"transportId": transportId,
+		"transportId": c.pubTransId,
 	})
 	senders := sendersData["senders"].([]interface{})
 
@@ -277,9 +284,9 @@ func (c *Client) notifySenders(tokenId string) {
 }
 
 func (c *Client) notifySender2Client(tokenId string, senderId string, metadata interface{}) {
-	transportId := c.idGenerator("sub")
+
 	subData := c.requestMedia("subscribe", jsonMap{
-		"transportId": transportId,
+		"transportId": c.subTransId,
 		"senderId":    senderId,
 	})
 
@@ -317,37 +324,14 @@ func (c *Client) subscribeNATS() {
 				"metadata": metadata,
 			})
 
-			c.publish2One(tokenId, "join", jsonMap{
-				"metadata": c.metadata,
-				"pub":      c.isPub,
-				"sub":      c.isSub,
-			})
-
 			if c.isPub && sub {
 				c.notifySenders(tokenId)
 			}
-
-		case "leave":
-			c.notification("leave", jsonMap{
-				"tokenId": tokenId,
-			})
 		case "publish":
 			senderId := msg.Data["senderId"].(string)
 			metadata := msg.Data["metadata"]
 			c.notifySender2Client(tokenId, senderId, metadata)
-		case "unpublish":
-			c.notification("unpublish", jsonMap{
-				"senderId": msg.Data["senderId"],
-				"tokenId":  tokenId,
-			})
-		case "pause":
-			c.notification("pause", jsonMap{
-				"senderId": msg.Data["senderId"],
-			})
-		case "resume":
-			c.notification("resume", jsonMap{
-				"senderId": msg.Data["senderId"],
-			})
+
 		}
 
 	})
@@ -377,14 +361,37 @@ func (c *Client) subscribeNATS() {
 					"metadata": metadata,
 				})
 
+				c.publish2One(tokenId, "join", jsonMap{
+					"metadata": c.metadata,
+					"pub":      c.isPub,
+					"sub":      c.isSub,
+				})
+
 				if c.isPub && sub {
 					c.notifySenders(tokenId)
 				}
+
+			case "leave":
+				c.notification("leave", jsonMap{
+					"tokenId": tokenId,
+				})
 			case "publish":
 				senderId := msg.Data["senderId"].(string)
 				metadata := msg.Data["metadata"]
 				c.notifySender2Client(tokenId, senderId, metadata)
-
+			case "unpublish":
+				c.notification("unpublish", jsonMap{
+					"senderId": msg.Data["senderId"],
+					"tokenId":  tokenId,
+				})
+			case "pause":
+				c.notification("pause", jsonMap{
+					"senderId": msg.Data["senderId"],
+				})
+			case "resume":
+				c.notification("resume", jsonMap{
+					"senderId": msg.Data["senderId"],
+				})
 			}
 		}
 
@@ -401,7 +408,7 @@ func (c *Client) requestMedia(method string, params jsonMap) jsonMap {
 	mediaSubject := fmt.Sprintf("media.%s", c.mediaServer.Id)
 	err := c.clientGroup.nc.Request(mediaSubject, request, &response, 10*time.Second)
 	if err != nil {
-		fmt.Printf("Request failed: %v\n", err)
+		fmt.Printf("Request failed: %s %v\n", method, err)
 	}
 
 	if response.Method != "response" {
@@ -420,8 +427,6 @@ func (c *Client) requestMediaNoParams(method string) jsonMap {
 
 func (c *Client) readPump() {
 	defer func() {
-		c.sessionSub.Unsubscribe()
-		c.selfSub.Unsubscribe()
 
 		c.clientGroup.unregister <- c
 		c.conn.Close()
@@ -437,6 +442,23 @@ func (c *Client) readPump() {
 			} else {
 				fmt.Println(err)
 				fmt.Println("websocket close")
+
+				c.selfSub.Unsubscribe()
+				c.sessionSub.Unsubscribe()
+
+				c.publish2Session("leave", jsonMap{})
+
+				if c.isPub {
+					c.requestMedia("close", jsonMap{
+						"transportId": c.pubTransId,
+					})
+				}
+
+				if c.isSub {
+					c.requestMedia("close", jsonMap{
+						"transportId": c.subTransId,
+					})
+				}
 			}
 			break
 		}
@@ -453,33 +475,43 @@ func (c *Client) WritePump() {
 	for {
 		select {
 		//send message to client
-		case message, ok := <-c.send:
+		case jsonMsg, ok := <-c.send:
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
 
-			w, err := c.conn.NextWriter(websocket.TextMessage)
-			if err != nil {
-				return
+			if err := c.conn.WriteJSON(jsonMsg); err != nil {
+				fmt.Println(err)
+				//TODO:
 			}
-			w.Write(message)
-
-			if err := w.Close(); err != nil {
-				return
-			}
-
-		case message, ok := <-c.recv: //TODO: move this case to a single select
-			if !ok {
-				//TODO(CC):
-			}
-			c.handleMessage(message)
+			//w, err := c.conn.NextWriter(websocket.TextMessage)
+			//if err != nil {
+			//	return
+			//}
+			//w.Write(message)
+			//
+			//if err := w.Close(); err != nil {
+			//	return
+			//}
 		case <-ticker.C:
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
 			}
+		}
+	}
+}
+
+func (c *Client) ProcessPump() {
+	for {
+		select {
+		case message, ok := <-c.recv: //TODO: move this case to a single select
+			if !ok {
+				//TODO(CC):
+			}
+			c.handleMessage(message)
 		}
 	}
 }
@@ -496,7 +528,7 @@ type RequestMessage struct {
 func newClient(clientGroup *ClientGroup, conn *websocket.Conn, tokenId string, sessionId string, metadata map[string]string) *Client {
 	fmt.Println("create client")
 	client := &Client{clientGroup: clientGroup, tokenId: tokenId, sessionId: sessionId, metadata: metadata, isPub: false, isSub: false}
-	client.send = make(chan []byte)
+	client.send = make(chan interface{})
 	client.recv = make(chan []byte)
 	client.conn = conn
 	return client

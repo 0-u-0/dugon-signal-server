@@ -156,6 +156,7 @@ func (handler wsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		go client.WritePump()
 		go client.readPump()
+		go client.ProcessPump()
 	}
 
 }
