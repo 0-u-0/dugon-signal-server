@@ -102,7 +102,7 @@ func (c *Client) setMediaServer() {
 	}
 }
 
-func (c *Client) handleMessage(message []byte) {
+func (c *Client) handleClientMessage(message []byte) {
 	var requestMes *RequestMessage
 	jsonErr := json.Unmarshal(message, &requestMes)
 	if jsonErr != nil {
@@ -182,8 +182,12 @@ func (c *Client) handleMessage(message []byte) {
 			})
 
 			c.publish2Session("publish", jsonMap{
-				"senderId": senderData["senderId"],
-				"metadata": requestMes.Params.Data["metadata"],
+				"mediaId":     c.mediaServer.Id,
+				"area":        c.mediaServer.Area,
+				"host":        c.mediaServer.Host,
+				"transportId": c.pubTransId,
+				"senderId":    senderData["senderId"],
+				"metadata":    requestMes.Params.Data["metadata"],
 			})
 		case "unpublish":
 			c.requestMedia("unpublish", jsonMap{
@@ -195,7 +199,20 @@ func (c *Client) handleMessage(message []byte) {
 			c.publish2Session("unpublish", jsonMap{
 				"senderId": data["senderId"],
 			})
-		//case "subscribe":
+		case "subscribe":
+
+			subData := c.requestMedia("subscribe", jsonMap{
+				"mediaId":           data["mediaId"],
+				"remoteTransportId": data["transportId"],
+				"transportId":       c.subTransId,
+				"senderId":          data["senderId"],
+			})
+
+			c.responseClient(requestMes.Id, jsonMap{
+				"codec":      subData["codec"],
+				"receiverId": subData["receiverId"],
+				"senderId":   data["senderId"],
+			})
 		case "unsubscribe":
 			c.requestMedia("unsubscribe", jsonMap{
 				"transportId": data["transportId"],
@@ -277,8 +294,12 @@ func (c *Client) notifySenders(tokenId string) {
 	for _, s := range senders {
 		sender := s.(jsonMap)
 		c.publish2One(tokenId, "publish", jsonMap{
-			"senderId": sender["id"],
-			"metadata": sender["metadata"],
+			"mediaId":     c.mediaServer.Id,
+			"area":        c.mediaServer.Area,
+			"host":        c.mediaServer.Host,
+			"transportId": c.pubTransId,
+			"senderId":    sender["id"],
+			"metadata":    sender["metadata"],
 		})
 	}
 }
@@ -324,13 +345,21 @@ func (c *Client) subscribeNATS() {
 				"metadata": metadata,
 			})
 
+			//FIXME: maybe useless
 			if c.isPub && sub {
 				c.notifySenders(tokenId)
 			}
 		case "publish":
-			senderId := msg.Data["senderId"].(string)
-			metadata := msg.Data["metadata"]
-			c.notifySender2Client(tokenId, senderId, metadata)
+			c.notification("publish", jsonMap{
+				"mediaId":     msg.Data["mediaId"],
+				"area":        msg.Data["area"],
+				"host":        msg.Data["host"],
+				"transportId": msg.Data["transportId"],
+				"senderId":    msg.Data["senderId"],
+				"metadata":    msg.Data["metadata"],
+				"tokenId":     tokenId,
+			})
+			//c.notifySender2Client(tokenId, senderId, metadata)
 
 		}
 
@@ -376,9 +405,16 @@ func (c *Client) subscribeNATS() {
 					"tokenId": tokenId,
 				})
 			case "publish":
-				senderId := msg.Data["senderId"].(string)
-				metadata := msg.Data["metadata"]
-				c.notifySender2Client(tokenId, senderId, metadata)
+				c.notification("publish", jsonMap{
+					"mediaId":     msg.Data["mediaId"],
+					"area":        msg.Data["area"],
+					"host":        msg.Data["host"],
+					"transportId": msg.Data["transportId"],
+					"senderId":    msg.Data["senderId"],
+					"metadata":    msg.Data["metadata"],
+					"tokenId":     tokenId,
+				})
+				//c.notifySender2Client(tokenId, senderId, metadata)
 			case "unpublish":
 				c.notification("unpublish", jsonMap{
 					"senderId": msg.Data["senderId"],
@@ -511,7 +547,7 @@ func (c *Client) ProcessPump() {
 			if !ok {
 				//TODO(CC):
 			}
-			c.handleMessage(message)
+			c.handleClientMessage(message)
 		}
 	}
 }
