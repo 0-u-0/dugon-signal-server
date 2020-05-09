@@ -85,22 +85,21 @@ func (c *Client) responseClientWithoutData(id int) {
 	c.responseClient(id, map[string]string{})
 }
 
-func (c *Client) setMediaServer(mediaId string) {
+func (c *Client) selectMediaServer(mediaId string) {
 
 	selectedMedia := mediaId
 	if len(c.clientGroup.mediaServers) > 0 {
 		if c.mediaServer == nil {
-			if len(mediaId) == 0 {
-				rand.Seed(time.Now().Unix())
-				keys := reflect.ValueOf(c.clientGroup.mediaServers).MapKeys()
-				selectedMedia = keys[rand.Intn(len(keys))].String()
-			}
-
 			ms, ok := c.clientGroup.mediaServers[selectedMedia]
 			if ok {
 				c.mediaServer = ms
 			}else {
-				//TODO(CC): error
+				rand.Seed(time.Now().Unix())
+				keys := reflect.ValueOf(c.clientGroup.mediaServers).MapKeys()
+				selectedMedia = keys[rand.Intn(len(keys))].String()
+				//TODO(CC): check
+				ms, _ := c.clientGroup.mediaServers[selectedMedia]
+				c.mediaServer = ms
 			}
 		}
 	} else {
@@ -125,7 +124,7 @@ func (c *Client) handleClientMessage(message []byte) {
 			sub := requestMes.Params.Data["sub"].(bool)
 			mediaId := requestMes.Params.Data["mediaId"].(string)
 			//FIXME: ...
-			c.setMediaServer(mediaId)
+			c.selectMediaServer(mediaId)
 
 			codecData := c.requestMediaNoParams("codecs")
 
