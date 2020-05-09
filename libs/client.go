@@ -85,16 +85,22 @@ func (c *Client) responseClientWithoutData(id int) {
 	c.responseClient(id, map[string]string{})
 }
 
-func (c *Client) setMediaServer() {
-	//
+func (c *Client) setMediaServer(mediaId string) {
+
+	selectedMedia := mediaId
 	if len(c.clientGroup.mediaServers) > 0 {
 		if c.mediaServer == nil {
-			rand.Seed(time.Now().Unix())
-			keys := reflect.ValueOf(c.clientGroup.mediaServers).MapKeys()
-			randId := keys[rand.Intn(len(keys))].String()
-			ms, ok := c.clientGroup.mediaServers[randId]
+			if len(mediaId) == 0 {
+				rand.Seed(time.Now().Unix())
+				keys := reflect.ValueOf(c.clientGroup.mediaServers).MapKeys()
+				selectedMedia = keys[rand.Intn(len(keys))].String()
+			}
+
+			ms, ok := c.clientGroup.mediaServers[selectedMedia]
 			if ok {
 				c.mediaServer = ms
+			}else {
+				//TODO(CC): error
 			}
 		}
 	} else {
@@ -117,9 +123,9 @@ func (c *Client) handleClientMessage(message []byte) {
 		case "join":
 			pub := requestMes.Params.Data["pub"].(bool)
 			sub := requestMes.Params.Data["sub"].(bool)
-
+			mediaId := requestMes.Params.Data["mediaId"].(string)
 			//FIXME: ...
-			c.setMediaServer()
+			c.setMediaServer(mediaId)
 
 			codecData := c.requestMediaNoParams("codecs")
 
@@ -540,6 +546,7 @@ func (c *Client) WritePump() {
 	}
 }
 
+//TODO(CC): add exist
 func (c *Client) ProcessPump() {
 	for {
 		select {
