@@ -1,8 +1,13 @@
+log_level = 'debug'
+log_to_file = false
+log_file_path = ''
+err_log_file_path = ''
+
 
 port = 8800
 https_enable = false
 cert = "./cert/server.crt"
 key = "./cert/server.key"
 nats_urls = [
-  "'nats://127.0.0.1:4222'"
+  "nats://127.0.0.1:4222"
 ]
