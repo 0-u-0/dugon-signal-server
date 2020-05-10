@@ -21,10 +21,10 @@ type MediaServer struct {
 }
 
 type ClientGroup struct {
-	clients map[*Client]bool
+	clients map[*client]bool
 
-	register   chan *Client
-	unregister chan *Client
+	register   chan *client
+	unregister chan *client
 
 	nc *nats.EncodedConn
 
@@ -33,9 +33,9 @@ type ClientGroup struct {
 
 func NewClientGroup(natsUrls []string) *ClientGroup {
 	g := &ClientGroup{
-		clients:      make(map[*Client]bool),
-		register:     make(chan *Client),
-		unregister:   make(chan *Client),
+		clients:      make(map[*client]bool),
+		register:     make(chan *client),
+		unregister:   make(chan *client),
 		mediaServers: make(map[string]*MediaServer),
 	}
 
@@ -156,7 +156,7 @@ func (handler wsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		go client.writePump()
 		go client.readPump()
-		go client.ProcessPump()
+		go client.processPump()
 	}
 
 }

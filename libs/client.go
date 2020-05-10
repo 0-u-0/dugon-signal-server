@@ -21,7 +21,7 @@ const (
 
 type jsonMap = map[string]interface{}
 
-type Client struct {
+type client struct {
 	clientGroup *ClientGroup
 	tokenId     string
 	sessionId   string
@@ -59,7 +59,7 @@ type requestParams struct {
 //	}
 //}
 
-func (c *Client) responseClient(id int, params interface{}) {
+func (c *client) responseClient(id int, params interface{}) {
 	response := jsonMap{
 		"method": "response",
 		"id":     id,
@@ -69,7 +69,7 @@ func (c *Client) responseClient(id int, params interface{}) {
 	//c.sendJson(response)
 }
 
-func (c *Client) notification(event string, data interface{}) {
+func (c *client) notification(event string, data interface{}) {
 	response := jsonMap{
 		"method": "notification",
 		"params": jsonMap{
@@ -81,11 +81,11 @@ func (c *Client) notification(event string, data interface{}) {
 	c.send <- response
 }
 
-func (c *Client) responseClientWithoutData(id int) {
+func (c *client) responseClientWithoutData(id int) {
 	c.responseClient(id, map[string]string{})
 }
 
-func (c *Client) selectMediaServer(mediaId string) {
+func (c *client) selectMediaServer(mediaId string) {
 
 	selectedMedia := mediaId
 	if len(c.clientGroup.mediaServers) > 0 {
@@ -107,7 +107,7 @@ func (c *Client) selectMediaServer(mediaId string) {
 	}
 }
 
-func (c *Client) handleClientMessage(message []byte) {
+func (c *client) handleClientMessage(message []byte) {
 	var requestMes *requestMessage
 	jsonErr := json.Unmarshal(message, &requestMes)
 	if jsonErr != nil {
@@ -263,7 +263,7 @@ type mediaResponse struct {
 
 //NATS
 //---------------------
-func (c *Client) publish2Session(method string, data jsonMap) {
+func (c *client) publish2Session(method string, data jsonMap) {
 	sessionSubject := fmt.Sprintf("%s.@", c.sessionId)
 
 	c.clientGroup.nc.Publish(sessionSubject, jsonMap{
@@ -273,7 +273,7 @@ func (c *Client) publish2Session(method string, data jsonMap) {
 	})
 }
 
-func (c *Client) publish2One(tokenId string, method string, data jsonMap) {
+func (c *client) publish2One(tokenId string, method string, data jsonMap) {
 	oneSubject := fmt.Sprintf("%s.%s", c.sessionId, tokenId)
 
 	c.clientGroup.nc.Publish(oneSubject, jsonMap{
@@ -289,7 +289,7 @@ type natsSubscribedMessage struct {
 	Data    jsonMap `json:"data"`
 }
 
-func (c *Client) notifySenders(tokenId string) {
+func (c *client) notifySenders(tokenId string) {
 
 	sendersData := c.requestMedia("senders", jsonMap{
 		"transportId": c.pubTransId,
@@ -309,7 +309,7 @@ func (c *Client) notifySenders(tokenId string) {
 	}
 }
 
-func (c *Client) notifySender2Client(tokenId string, senderId string, metadata interface{}) {
+func (c *client) notifySender2Client(tokenId string, senderId string, metadata interface{}) {
 
 	subData := c.requestMedia("subscribe", jsonMap{
 		"transportId": c.subTransId,
@@ -326,7 +326,7 @@ func (c *Client) notifySender2Client(tokenId string, senderId string, metadata i
 
 }
 
-func (c *Client) subscribeNATS() {
+func (c *client) subscribeNATS() {
 	selfSubject := fmt.Sprintf("%s.%s", c.sessionId, c.tokenId)
 	//TODO: error
 	selfSub, _ := c.clientGroup.nc.Subscribe(selfSubject, func(m *nats.Msg) {
@@ -440,7 +440,7 @@ func (c *Client) subscribeNATS() {
 	c.sessionSub = sessionSub
 }
 
-func (c *Client) requestMedia(method string, params jsonMap) jsonMap {
+func (c *client) requestMedia(method string, params jsonMap) jsonMap {
 
 	request := MediaRequest{Method: method, Params: params}
 
@@ -458,7 +458,7 @@ func (c *Client) requestMedia(method string, params jsonMap) jsonMap {
 	return response.Data
 }
 
-func (c *Client) requestMediaNoParams(method string) jsonMap {
+func (c *client) requestMediaNoParams(method string) jsonMap {
 	params := jsonMap{}
 	return c.requestMedia(method, params)
 }
@@ -466,7 +466,7 @@ func (c *Client) requestMediaNoParams(method string) jsonMap {
 // WebSocket
 //-------------------
 
-func (c *Client) readPump() {
+func (c *client) readPump() {
 	defer func() {
 
 		c.clientGroup.unregister <- c
@@ -507,7 +507,7 @@ func (c *Client) readPump() {
 	}
 }
 
-func (c *Client) writePump() {
+func (c *client) writePump() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
@@ -546,7 +546,7 @@ func (c *Client) writePump() {
 }
 
 //TODO(CC): add exist
-func (c *Client) ProcessPump() {
+func (c *client) processPump() {
 	for {
 		select {
 		case message, ok := <-c.recv: //TODO: move this case to a single select
@@ -567,9 +567,9 @@ type requestMessage struct {
 	} `json:"params"`
 }
 
-func newClient(clientGroup *ClientGroup, conn *websocket.Conn, tokenId string, sessionId string, metadata map[string]string) *Client {
+func newClient(clientGroup *ClientGroup, conn *websocket.Conn, tokenId string, sessionId string, metadata map[string]string) *client {
 	fmt.Println("create client")
-	client := &Client{clientGroup: clientGroup, tokenId: tokenId, sessionId: sessionId, metadata: metadata, isPub: false, isSub: false}
+	client := &client{clientGroup: clientGroup, tokenId: tokenId, sessionId: sessionId, metadata: metadata, isPub: false, isSub: false}
 	client.send = make(chan interface{})
 	client.recv = make(chan []byte)
 	client.conn = conn
