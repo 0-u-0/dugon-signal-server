@@ -27,22 +27,32 @@ type Logging struct {
 }
 
 const (
-	VERBOSE LogLevel = iota
+	TRACE LogLevel = iota
 	DEBUG
 	INFO
-	WARNING
+	WARN
 	ERROR
 	FATAL
 )
 
 const (
-	ServerTag  = " [ SERV ] |%s| - "
-	VerboseTag = " [ VERB ] "
-	DebugTag   = " [ DEBU ] "
-	InfoTag    = " [ INFO ] |%s| - %s:%d: "
-	WarnTag    = " [ WARN ] |%s| - %s:%d: "
-	ErrorTag   = " [ ERRO ] |%s| - %s:%d: "
-	FatalTag   = " [ FATA ] |%s| - %s:%d: "
+	TraceColor = 34
+	DebugColor = 36
+	InfoColor  = 32
+	WarnColor  = 33
+	ErrorColor = 91
+	FatalColor = 35
+)
+
+const (
+	ServerTag = " [ SERVE ] |%s| - "
+	TraceTag  = " [ TRACE ] |%s| - %s:%d: "
+	DebugTag  = " [ DEBUG ] |%s| - %s:%d: "
+	InfoTag   = " [ INFO  ] |%s| - %s:%d: "
+	WarnTag   = " [ WARN  ] |%s| - %s:%d: "
+	ErrorTag  = " [ ERROR ] |%s| - %s:%d: "
+	FatalTag  = " [ FATAL ] |%s| - %s:%d: "
+	ColorTag  = "\x1b[%dm%s\x1b[0m"
 )
 
 func GetTimeFormat() string {
@@ -50,30 +60,78 @@ func GetTimeFormat() string {
 	return t.Format("2006-01-02 15:04:05")
 }
 
-func (logging *Logging) Verbose(v ...interface{}) {
-	if logging.Level <= VERBOSE {
-		logging.NormalLog.SetPrefix(VerboseTag)
+func getPrefix(level LogLevel, file string, line int) string {
+	color := !logToFile
+
+	var tag string
+	switch level {
+	case TRACE:
+		tag = fmt.Sprintf(TraceTag, GetTimeFormat(), path.Base(file), line)
+		if color {
+			return fmt.Sprintf(ColorTag, TraceColor, tag)
+		}
+	case DEBUG:
+		tag = fmt.Sprintf(DebugTag, GetTimeFormat(), path.Base(file), line)
+		if color {
+			return fmt.Sprintf(ColorTag, DebugColor, tag)
+		}
+	case INFO:
+		tag = fmt.Sprintf(InfoTag, GetTimeFormat(), path.Base(file), line)
+		if color {
+			return fmt.Sprintf(ColorTag, InfoColor, tag)
+		}
+	case WARN:
+		tag = fmt.Sprintf(WarnTag, GetTimeFormat(), path.Base(file), line)
+		if color {
+			return fmt.Sprintf(ColorTag, WarnColor, tag)
+		}
+	case ERROR:
+		tag = fmt.Sprintf(ErrorTag, GetTimeFormat(), path.Base(file), line)
+		if color {
+			return fmt.Sprintf(ColorTag, ErrorColor, tag)
+		}
+	case FATAL:
+		tag = fmt.Sprintf(FatalTag, GetTimeFormat(), path.Base(file), line)
+		if color {
+			return fmt.Sprintf(ColorTag, FatalColor, tag)
+		}
+	}
+
+	return tag
+}
+
+func (logging *Logging) Trace(v ...interface{}) {
+	if logging.Level <= TRACE {
+		_, file, line, _ := runtime.Caller(1)
+
+		logging.NormalLog.SetPrefix(getPrefix(TRACE, file, line))
 		logging.NormalLog.Println(v...)
 	}
 }
 
-func (logging *Logging) Verbosef(format string, v ...interface{}) {
-	if logging.Level <= VERBOSE {
-		logging.NormalLog.SetPrefix(VerboseTag)
+func (logging *Logging) Tracef(format string, v ...interface{}) {
+	if logging.Level <= TRACE {
+		_, file, line, _ := runtime.Caller(1)
+
+		logging.NormalLog.SetPrefix(getPrefix(TRACE, file, line))
 		logging.NormalLog.Printf(format, v...)
 	}
 }
 
 func (logging *Logging) Debug(v ...interface{}) {
 	if logging.Level <= DEBUG {
-		logging.NormalLog.SetPrefix(DebugTag)
+		_, file, line, _ := runtime.Caller(1)
+
+		logging.NormalLog.SetPrefix(getPrefix(DEBUG, file, line))
 		logging.NormalLog.Println(v...)
 	}
 }
 
 func (logging *Logging) Debugf(format string, v ...interface{}) {
 	if logging.Level <= DEBUG {
-		logging.NormalLog.SetPrefix(DebugTag)
+		_, file, line, _ := runtime.Caller(1)
+
+		logging.NormalLog.SetPrefix(getPrefix(DEBUG, file, line))
 		logging.NormalLog.Printf(format, v...)
 	}
 }
@@ -82,7 +140,7 @@ func (logging *Logging) Info(v ...interface{}) {
 	if logging.Level <= INFO {
 		_, file, line, _ := runtime.Caller(1)
 
-		logging.NormalLog.SetPrefix(fmt.Sprintf(InfoTag, GetTimeFormat(), path.Base(file), line))
+		logging.NormalLog.SetPrefix(getPrefix(INFO, file, line))
 		logging.NormalLog.Println(v...)
 	}
 }
@@ -90,23 +148,26 @@ func (logging *Logging) Info(v ...interface{}) {
 func (logging *Logging) Infof(format string, v ...interface{}) {
 	if logging.Level <= INFO {
 		_, file, line, _ := runtime.Caller(1)
-		logging.NormalLog.SetPrefix(fmt.Sprintf(InfoTag, GetTimeFormat(), path.Base(file), line))
+
+		logging.NormalLog.SetPrefix(getPrefix(INFO, file, line))
 		logging.NormalLog.Printf(format, v...)
 	}
 }
 
-func (logging *Logging) Warning(v ...interface{}) {
-	if logging.Level <= WARNING {
+func (logging *Logging) Warn(v ...interface{}) {
+	if logging.Level <= WARN {
 		_, file, line, _ := runtime.Caller(1)
-		logging.NormalLog.SetPrefix(fmt.Sprintf(WarnTag, GetTimeFormat(), path.Base(file), line))
+
+		logging.NormalLog.SetPrefix(getPrefix(WARN, file, line))
 		logging.NormalLog.Println(v...)
 	}
 }
 
-func (logging *Logging) Warningf(format string, v ...interface{}) {
-	if logging.Level <= WARNING {
+func (logging *Logging) Warnf(format string, v ...interface{}) {
+	if logging.Level <= WARN {
 		_, file, line, _ := runtime.Caller(1)
-		logging.NormalLog.SetPrefix(fmt.Sprintf(WarnTag, GetTimeFormat(), path.Base(file), line))
+
+		logging.NormalLog.SetPrefix(getPrefix(WARN, file, line))
 		logging.NormalLog.Printf(format, v...)
 	}
 }
@@ -114,7 +175,8 @@ func (logging *Logging) Warningf(format string, v ...interface{}) {
 func (logging *Logging) Error(v ...interface{}) {
 	if logging.Level <= ERROR {
 		_, file, line, _ := runtime.Caller(1)
-		logging.ErrorLog.SetPrefix(fmt.Sprintf(ErrorTag, GetTimeFormat(), path.Base(file), line))
+
+		logging.ErrorLog.SetPrefix(getPrefix(ERROR, file, line))
 		logging.ErrorLog.Println(v...)
 	}
 }
@@ -122,7 +184,8 @@ func (logging *Logging) Error(v ...interface{}) {
 func (logging *Logging) Errorf(format string, v ...interface{}) {
 	if logging.Level <= ERROR {
 		_, file, line, _ := runtime.Caller(1)
-		logging.ErrorLog.SetPrefix(fmt.Sprintf(ErrorTag, GetTimeFormat(), path.Base(file), line))
+
+		logging.ErrorLog.SetPrefix(getPrefix(ERROR, file, line))
 		logging.ErrorLog.Printf(format, v...)
 	}
 }
@@ -130,7 +193,8 @@ func (logging *Logging) Errorf(format string, v ...interface{}) {
 func (logging *Logging) Fatal(v ...interface{}) {
 	if logging.Level <= FATAL {
 		_, file, line, _ := runtime.Caller(1)
-		logging.FatalLog.SetPrefix(fmt.Sprintf(FatalTag, GetTimeFormat(), path.Base(file), line))
+
+		logging.FatalLog.SetPrefix(getPrefix(FATAL, file, line))
 		logging.FatalLog.Panic(v...)
 	}
 }
@@ -138,7 +202,8 @@ func (logging *Logging) Fatal(v ...interface{}) {
 func (logging *Logging) Fatalf(format string, v ...interface{}) {
 	if logging.Level <= FATAL {
 		_, file, line, _ := runtime.Caller(1)
-		logging.FatalLog.SetPrefix(fmt.Sprintf(FatalTag, GetTimeFormat(), path.Base(file), line))
+
+		logging.FatalLog.SetPrefix(getPrefix(FATAL, file, line))
 		logging.FatalLog.Panicf(format, v...)
 	}
 }
@@ -178,14 +243,14 @@ func LoadLoggerModule(logLevel string, toFile bool, logPath, logErrorPath string
 
 	var level LogLevel
 	switch logLevel {
-	case "verbose":
-		level = VERBOSE
+	case "track":
+		level = TRACE
 	case "debug":
 		level = DEBUG
 	case "info":
 		level = INFO
-	case "warning":
-		level = WARNING
+	case "warn":
+		level = WARN
 	case "error":
 		level = ERROR
 	case "fatal":
