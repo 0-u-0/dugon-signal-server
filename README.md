@@ -5,12 +5,15 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/0-u-0/dugon-signal-server)](https://goreportcard.com/report/github.com/0-u-0/dugon-signal-server)
 ## Install
 
-## Run
+```bash
+$ go get https://github.com/0-u-0/dugon-signal-server
+```
 
 ## Dependencies
 
 * [NATS](https://github.com/nats-io/nats.go)
 * [Websocket](https://github.com/gorilla/websocket) 
+* [Viper](https://github.com/spf13/viper)
 
 ## Authors
 

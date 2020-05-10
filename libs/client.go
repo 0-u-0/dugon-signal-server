@@ -108,7 +108,7 @@ func (c *Client) selectMediaServer(mediaId string) {
 }
 
 func (c *Client) handleClientMessage(message []byte) {
-	var requestMes *RequestMessage
+	var requestMes *requestMessage
 	jsonErr := json.Unmarshal(message, &requestMes)
 	if jsonErr != nil {
 		//TODO(CC):
@@ -152,7 +152,7 @@ func (c *Client) handleClientMessage(message []byte) {
 				transportId, _ := uuid.NewUUID()
 				c.subTransId = transportId.String()
 
-				mediaRequest := map[string]interface{}{
+				mediaRequest := jsonMap{
 					"transportId": c.subTransId,
 					"role":        "sub",
 				}
@@ -253,10 +253,10 @@ func (c *Client) handleClientMessage(message []byte) {
 
 type MediaRequest struct {
 	Method string                 `json:"method"`
-	Params map[string]interface{} `json:"params"`
+	Params jsonMap `json:"params"`
 }
 
-type MediaResponse struct {
+type mediaResponse struct {
 	Method string  `json:"method"`
 	Data   jsonMap `json:"data"`
 }
@@ -276,7 +276,7 @@ func (c *Client) publish2Session(method string, data jsonMap) {
 func (c *Client) publish2One(tokenId string, method string, data jsonMap) {
 	oneSubject := fmt.Sprintf("%s.%s", c.sessionId, tokenId)
 
-	c.clientGroup.nc.Publish(oneSubject, map[string]interface{}{
+	c.clientGroup.nc.Publish(oneSubject, jsonMap{
 		"tokenId": c.tokenId,
 		"method":  method,
 		"data":    data,
@@ -444,7 +444,7 @@ func (c *Client) requestMedia(method string, params jsonMap) jsonMap {
 
 	request := MediaRequest{Method: method, Params: params}
 
-	var response MediaResponse
+	var response mediaResponse
 
 	mediaSubject := fmt.Sprintf("media.%s", c.mediaServer.Id)
 	err := c.clientGroup.nc.Request(mediaSubject, request, &response, 10*time.Second)
@@ -459,7 +459,7 @@ func (c *Client) requestMedia(method string, params jsonMap) jsonMap {
 }
 
 func (c *Client) requestMediaNoParams(method string) jsonMap {
-	params := map[string]interface{}{}
+	params := jsonMap{}
 	return c.requestMedia(method, params)
 }
 
@@ -507,7 +507,7 @@ func (c *Client) readPump() {
 	}
 }
 
-func (c *Client) WritePump() {
+func (c *Client) writePump() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
@@ -558,12 +558,12 @@ func (c *Client) ProcessPump() {
 	}
 }
 
-type RequestMessage struct {
+type requestMessage struct {
 	Id     int    `json:"id"`
 	Method string `json:"method"`
 	Params struct {
 		Event string                 `json:"event"`
-		Data  map[string]interface{} `json:"data"`
+		Data  jsonMap `json:"data"`
 	} `json:"params"`
 }
 
