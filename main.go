@@ -35,7 +35,7 @@ func main() {
 	key := viper.GetString("key")
 	natsUrls := viper.GetStringSlice("nats_urls")
 
-	libs.Log.Info("Config ->",viper.AllSettings())
+	libs.Log.Info("Config ->", viper.AllSettings())
 
 	clientGroup := libs.NewClientGroup(natsUrls)
 	go clientGroup.Run()
