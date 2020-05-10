@@ -17,7 +17,9 @@ $ go get https://github.com/0-u-0/dugon-signal-server
 
 ## Docker 
 
-https://github.com/0-u-0/dugon-signal-server-docker
+```bash
+$ docker pull dugon/signal:latest
+```
 
 ## Authors
 
