@@ -93,7 +93,7 @@ func (c *Client) selectMediaServer(mediaId string) {
 			ms, ok := c.clientGroup.mediaServers[selectedMedia]
 			if ok {
 				c.mediaServer = ms
-			}else {
+			} else {
 				rand.Seed(time.Now().Unix())
 				keys := reflect.ValueOf(c.clientGroup.mediaServers).MapKeys()
 				selectedMedia = keys[rand.Intn(len(keys))].String()
@@ -252,7 +252,7 @@ func (c *Client) handleClientMessage(message []byte) {
 }
 
 type MediaRequest struct {
-	Method string                 `json:"method"`
+	Method string  `json:"method"`
 	Params jsonMap `json:"params"`
 }
 
@@ -562,7 +562,7 @@ type requestMessage struct {
 	Id     int    `json:"id"`
 	Method string `json:"method"`
 	Params struct {
-		Event string                 `json:"event"`
+		Event string  `json:"event"`
 		Data  jsonMap `json:"data"`
 	} `json:"params"`
 }
