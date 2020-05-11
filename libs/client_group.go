@@ -64,7 +64,7 @@ func NewClientGroup(natsUrls []string) *ClientGroup {
 			//keepalive
 			media.isAlive = true
 		} else {
-			fmt.Printf("%s register\n", info.Name)
+			Log.Infof("Media server [%s] registered\n", info.Id)
 			info.isAlive = true
 			g.mediaServers[info.Id] = info
 		}

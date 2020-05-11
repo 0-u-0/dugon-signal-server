@@ -115,7 +115,7 @@ func (c *client) handleClientMessage(message []byte) {
 		return
 	}
 
-	fmt.Println(len(message))
+	//fmt.Println(len(message))
 	if requestMes.Method == "request" {
 		data := requestMes.Params.Data
 		switch requestMes.Params.Event {
@@ -264,7 +264,7 @@ type mediaResponse struct {
 //NATS
 //---------------------
 func (c *client) publish2Session(method string, data jsonMap) {
-	sessionSubject := fmt.Sprintf("%s.@", c.sessionId)
+	sessionSubject := fmt.Sprintf("signal.%s.@", c.sessionId)
 
 	c.clientGroup.nc.Publish(sessionSubject, jsonMap{
 		"tokenId": c.tokenId,
@@ -274,7 +274,7 @@ func (c *client) publish2Session(method string, data jsonMap) {
 }
 
 func (c *client) publish2One(tokenId string, method string, data jsonMap) {
-	oneSubject := fmt.Sprintf("%s.%s", c.sessionId, tokenId)
+	oneSubject := fmt.Sprintf("signal.%s.%s", c.sessionId, tokenId)
 
 	c.clientGroup.nc.Publish(oneSubject, jsonMap{
 		"tokenId": c.tokenId,
@@ -327,7 +327,7 @@ func (c *client) notifySender2Client(tokenId string, senderId string, metadata i
 }
 
 func (c *client) subscribeNATS() {
-	selfSubject := fmt.Sprintf("%s.%s", c.sessionId, c.tokenId)
+	selfSubject := fmt.Sprintf("signal.%s.%s", c.sessionId, c.tokenId)
 	//TODO: error
 	selfSub, _ := c.clientGroup.nc.Subscribe(selfSubject, func(m *nats.Msg) {
 		fmt.Printf("Received a message: %s\n", string(m.Data))
@@ -371,7 +371,7 @@ func (c *client) subscribeNATS() {
 	})
 	c.selfSub = selfSub
 
-	sessionSubject := fmt.Sprintf("%s.@", c.sessionId)
+	sessionSubject := fmt.Sprintf("signal.%s.@", c.sessionId)
 	//TODO(CC): error
 	sessionSub, _ := c.clientGroup.nc.Subscribe(sessionSubject, func(m *nats.Msg) {
 		fmt.Printf("Received a session message: %s\n", string(m.Data))
@@ -449,7 +449,7 @@ func (c *client) requestMedia(method string, params jsonMap) jsonMap {
 	mediaSubject := fmt.Sprintf("media.%s", c.mediaServer.Id)
 	err := c.clientGroup.nc.Request(mediaSubject, request, &response, 10*time.Second)
 	if err != nil {
-		fmt.Printf("Request failed: %s %v\n", method, err)
+		Log.Warnf("Request failed: %s %v\n", method, err)
 	}
 
 	if response.Method != "response" {
@@ -457,6 +457,18 @@ func (c *client) requestMedia(method string, params jsonMap) jsonMap {
 	}
 	return response.Data
 }
+
+//func (c *client) notifyMedia(method string, params jsonMap)  {
+//
+//	request := MediaRequest{Method: method, Params: params}
+//
+//	mediaSubject := "media.@"
+//	err := c.clientGroup.nc.Publish(mediaSubject, request)
+//	if err != nil {
+//		Log.Warnf("Notify media failed: %s %v\n", method, err)
+//	}
+//}
+//
 
 func (c *client) requestMediaNoParams(method string) jsonMap {
 	params := jsonMap{}
