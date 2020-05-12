@@ -43,11 +43,11 @@ func NewClientGroup(natsUrls []string) *ClientGroup {
 	//FIXME: add reconnect
 	nc, err := nats.Connect(natsUrl)
 	if err != nil {
-		Log.Fatalf("Nat connect error  %w", err)
+		Log.Fatalf("Nat connect error  %w\n", err)
 	}
 	c, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER)
 	if err != nil {
-		Log.Fatalf("Nat json connect error  %w", err)
+		Log.Fatalf("Nat json connect error  %w\n", err)
 	}
 	g.nc = c
 
@@ -56,7 +56,7 @@ func NewClientGroup(natsUrls []string) *ClientGroup {
 		var info = &MediaServer{}
 		err := json.Unmarshal(m.Data, info)
 		if err != nil {
-			Log.Warnf("Heartbeat json decode error : %w", err)
+			Log.Warnf("Heartbeat json decode error : %w\n", err)
 		}
 
 		if media, ok := g.mediaServers[info.Id]; ok {
@@ -133,7 +133,7 @@ func (handler wsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		err := json.Unmarshal(queryByte, &params)
 		if err != nil {
 			//TODO(CC): response error
-			Log.Warnf("Json decode error : %w",err)
+			Log.Warnf("Json decode error : %w\n",err)
 			return
 		}
 		upgrade := websocket.Upgrader{
@@ -146,7 +146,7 @@ func (handler wsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		conn, err := upgrade.Upgrade(w, r, header)
 
 		if err != nil {
-			Log.Warnf("Websocket err : %w", err)
+			Log.Warnf("Websocket err : %w\n", err)
 			return
 		}
 

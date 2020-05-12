@@ -6,7 +6,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/nats-io/nats.go"
-	"log"
 	"math/rand"
 	"reflect"
 	"time"
@@ -330,13 +329,12 @@ func (c *client) subscribeNATS() {
 	selfSubject := fmt.Sprintf("signal.%s.%s", c.sessionId, c.tokenId)
 	//TODO: error
 	selfSub, _ := c.clientGroup.nc.Subscribe(selfSubject, func(m *nats.Msg) {
-		fmt.Printf("Received a message: %s\n", string(m.Data))
+		Log.Tracef("Self NATS received a message: %s \n", string(m.Data))
 
 		var msg natsSubscribedMessage
 		err := json.Unmarshal(m.Data, &msg)
 		if err != nil {
-			//TODO(CC): error
-			fmt.Println(err)
+			Log.Warnf("Self NATS json decode error : %w\n",err)
 		}
 
 		tokenId := msg.TokenId
@@ -374,13 +372,12 @@ func (c *client) subscribeNATS() {
 	sessionSubject := fmt.Sprintf("signal.%s.@", c.sessionId)
 	//TODO(CC): error
 	sessionSub, _ := c.clientGroup.nc.Subscribe(sessionSubject, func(m *nats.Msg) {
-		fmt.Printf("Received a session message: %s\n", string(m.Data))
+		Log.Tracef("Session NATS received a message: %s \n", string(m.Data))
 
 		var msg natsSubscribedMessage
 		err := json.Unmarshal(m.Data, &msg)
 		if err != nil {
-			//TODO(CC): error
-			fmt.Println(err)
+			Log.Warnf("Session NATS json decode error : %w\n",err)
 		}
 
 		tokenId := msg.TokenId
@@ -491,10 +488,9 @@ func (c *client) readPump() {
 		_, message, err := c.conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				log.Printf("error: %v", err)
+				Log.Warnf("Websocket error: %v", err)
 			} else {
-				fmt.Println(err)
-				Log.Debug("websocket close")
+				Log.Debugf("Websocket closed, error : %v",err)
 
 				c.selfSub.Unsubscribe()
 				c.sessionSub.Unsubscribe()
@@ -536,7 +532,7 @@ func (c *client) writePump() {
 			}
 
 			if err := c.conn.WriteJSON(jsonMsg); err != nil {
-				fmt.Println(err)
+				Log.Warnf("Websocket json send error : %v",err)
 				//TODO:
 			}
 			//w, err := c.conn.NextWriter(websocket.TextMessage)
