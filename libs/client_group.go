@@ -40,14 +40,14 @@ func NewClientGroup(natsUrls []string) *ClientGroup {
 	}
 
 	natsUrl := strings.Join(natsUrls, " ,")
-	//FIXME: maybe useful
+	//FIXME: add reconnect
 	nc, err := nats.Connect(natsUrl)
 	if err != nil {
-		fmt.Println(err)
+		Log.Fatalf("Nat connect error  %w", err)
 	}
 	c, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER)
 	if err != nil {
-		fmt.Println(err)
+		Log.Fatalf("Nat json connect error  %w", err)
 	}
 	g.nc = c
 
@@ -56,8 +56,7 @@ func NewClientGroup(natsUrls []string) *ClientGroup {
 		var info = &MediaServer{}
 		err := json.Unmarshal(m.Data, info)
 		if err != nil {
-			//TODO(CC): error
-			fmt.Printf("error %s", err)
+			Log.Warnf("Heartbeat json decode error : %w", err)
 		}
 
 		if media, ok := g.mediaServers[info.Id]; ok {
@@ -83,7 +82,7 @@ func (g *ClientGroup) Run() {
 			g.clients[client] = true
 		case client := <-g.unregister:
 			if _, ok := g.clients[client]; ok {
-				fmt.Printf("%s client close\n", client.tokenId)
+				Log.Debugf("%s client close\n", client.tokenId)
 				delete(g.clients, client)
 			}
 		case <-t.C:
@@ -91,7 +90,7 @@ func (g *ClientGroup) Run() {
 				if e.isAlive {
 					e.isAlive = false
 				} else {
-					fmt.Printf("media server {%s} died\n", e.Name)
+					Log.Debugf("media server {%s} died\n", e.Name)
 					delete(g.mediaServers, i)
 				}
 			}
@@ -118,9 +117,9 @@ func InitWsServer(g *ClientGroup, port int, httpsEnable bool,
 	}
 
 	if httpsEnable {
-		fmt.Println(s.ListenAndServeTLS(crtPath, keyPath))
+		Log.Fatal(s.ListenAndServeTLS(crtPath, keyPath))
 	} else {
-		fmt.Println(s.ListenAndServe())
+		Log.Fatal(s.ListenAndServe())
 	}
 }
 
@@ -134,7 +133,7 @@ func (handler wsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		err := json.Unmarshal(queryByte, &params)
 		if err != nil {
 			//TODO(CC): response error
-			fmt.Println("error:", err)
+			Log.Warnf("Json decode error : %w",err)
 			return
 		}
 		upgrade := websocket.Upgrader{
@@ -147,7 +146,7 @@ func (handler wsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		conn, err := upgrade.Upgrade(w, r, header)
 
 		if err != nil {
-			fmt.Println("error:", err)
+			Log.Warnf("Websocket err : %w", err)
 			return
 		}
 

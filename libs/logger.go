@@ -21,9 +21,9 @@ type LogLevel = int
 
 type Logging struct {
 	Level     LogLevel
-	NormalLog *log.Logger
-	ErrorLog  *log.Logger
-	FatalLog  *log.Logger
+	normalLog *log.Logger
+	errorLog  *log.Logger
+	fatalLog  *log.Logger
 }
 
 const (
@@ -104,8 +104,8 @@ func (logging *Logging) Trace(v ...interface{}) {
 	if logging.Level <= TRACE {
 		_, file, line, _ := runtime.Caller(1)
 
-		logging.NormalLog.SetPrefix(getPrefix(TRACE, file, line))
-		logging.NormalLog.Println(v...)
+		logging.normalLog.SetPrefix(getPrefix(TRACE, file, line))
+		logging.normalLog.Println(v...)
 	}
 }
 
@@ -113,8 +113,8 @@ func (logging *Logging) Tracef(format string, v ...interface{}) {
 	if logging.Level <= TRACE {
 		_, file, line, _ := runtime.Caller(1)
 
-		logging.NormalLog.SetPrefix(getPrefix(TRACE, file, line))
-		logging.NormalLog.Printf(format, v...)
+		logging.normalLog.SetPrefix(getPrefix(TRACE, file, line))
+		logging.normalLog.Printf(format, v...)
 	}
 }
 
@@ -122,8 +122,8 @@ func (logging *Logging) Debug(v ...interface{}) {
 	if logging.Level <= DEBUG {
 		_, file, line, _ := runtime.Caller(1)
 
-		logging.NormalLog.SetPrefix(getPrefix(DEBUG, file, line))
-		logging.NormalLog.Println(v...)
+		logging.normalLog.SetPrefix(getPrefix(DEBUG, file, line))
+		logging.normalLog.Println(v...)
 	}
 }
 
@@ -131,8 +131,8 @@ func (logging *Logging) Debugf(format string, v ...interface{}) {
 	if logging.Level <= DEBUG {
 		_, file, line, _ := runtime.Caller(1)
 
-		logging.NormalLog.SetPrefix(getPrefix(DEBUG, file, line))
-		logging.NormalLog.Printf(format, v...)
+		logging.normalLog.SetPrefix(getPrefix(DEBUG, file, line))
+		logging.normalLog.Printf(format, v...)
 	}
 }
 
@@ -140,8 +140,8 @@ func (logging *Logging) Info(v ...interface{}) {
 	if logging.Level <= INFO {
 		_, file, line, _ := runtime.Caller(1)
 
-		logging.NormalLog.SetPrefix(getPrefix(INFO, file, line))
-		logging.NormalLog.Println(v...)
+		logging.normalLog.SetPrefix(getPrefix(INFO, file, line))
+		logging.normalLog.Println(v...)
 	}
 }
 
@@ -149,8 +149,8 @@ func (logging *Logging) Infof(format string, v ...interface{}) {
 	if logging.Level <= INFO {
 		_, file, line, _ := runtime.Caller(1)
 
-		logging.NormalLog.SetPrefix(getPrefix(INFO, file, line))
-		logging.NormalLog.Printf(format, v...)
+		logging.normalLog.SetPrefix(getPrefix(INFO, file, line))
+		logging.normalLog.Printf(format, v...)
 	}
 }
 
@@ -158,8 +158,8 @@ func (logging *Logging) Warn(v ...interface{}) {
 	if logging.Level <= WARN {
 		_, file, line, _ := runtime.Caller(1)
 
-		logging.NormalLog.SetPrefix(getPrefix(WARN, file, line))
-		logging.NormalLog.Println(v...)
+		logging.normalLog.SetPrefix(getPrefix(WARN, file, line))
+		logging.normalLog.Println(v...)
 	}
 }
 
@@ -167,8 +167,8 @@ func (logging *Logging) Warnf(format string, v ...interface{}) {
 	if logging.Level <= WARN {
 		_, file, line, _ := runtime.Caller(1)
 
-		logging.NormalLog.SetPrefix(getPrefix(WARN, file, line))
-		logging.NormalLog.Printf(format, v...)
+		logging.normalLog.SetPrefix(getPrefix(WARN, file, line))
+		logging.normalLog.Printf(format, v...)
 	}
 }
 
@@ -176,8 +176,8 @@ func (logging *Logging) Error(v ...interface{}) {
 	if logging.Level <= ERROR {
 		_, file, line, _ := runtime.Caller(1)
 
-		logging.ErrorLog.SetPrefix(getPrefix(ERROR, file, line))
-		logging.ErrorLog.Println(v...)
+		logging.errorLog.SetPrefix(getPrefix(ERROR, file, line))
+		logging.errorLog.Println(v...)
 	}
 }
 
@@ -185,8 +185,8 @@ func (logging *Logging) Errorf(format string, v ...interface{}) {
 	if logging.Level <= ERROR {
 		_, file, line, _ := runtime.Caller(1)
 
-		logging.ErrorLog.SetPrefix(getPrefix(ERROR, file, line))
-		logging.ErrorLog.Printf(format, v...)
+		logging.errorLog.SetPrefix(getPrefix(ERROR, file, line))
+		logging.errorLog.Printf(format, v...)
 	}
 }
 
@@ -194,8 +194,8 @@ func (logging *Logging) Fatal(v ...interface{}) {
 	if logging.Level <= FATAL {
 		_, file, line, _ := runtime.Caller(1)
 
-		logging.FatalLog.SetPrefix(getPrefix(FATAL, file, line))
-		logging.FatalLog.Panic(v...)
+		logging.fatalLog.SetPrefix(getPrefix(FATAL, file, line))
+		logging.fatalLog.Panic(v...)
 	}
 }
 
@@ -203,8 +203,8 @@ func (logging *Logging) Fatalf(format string, v ...interface{}) {
 	if logging.Level <= FATAL {
 		_, file, line, _ := runtime.Caller(1)
 
-		logging.FatalLog.SetPrefix(getPrefix(FATAL, file, line))
-		logging.FatalLog.Panicf(format, v...)
+		logging.fatalLog.SetPrefix(getPrefix(FATAL, file, line))
+		logging.fatalLog.Panicf(format, v...)
 	}
 }
 

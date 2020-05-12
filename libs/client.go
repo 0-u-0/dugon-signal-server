@@ -494,7 +494,7 @@ func (c *client) readPump() {
 				log.Printf("error: %v", err)
 			} else {
 				fmt.Println(err)
-				fmt.Println("websocket close")
+				Log.Debug("websocket close")
 
 				c.selfSub.Unsubscribe()
 				c.sessionSub.Unsubscribe()
@@ -580,7 +580,7 @@ type requestMessage struct {
 }
 
 func newClient(clientGroup *ClientGroup, conn *websocket.Conn, tokenId string, sessionId string, metadata map[string]string) *client {
-	fmt.Println("create client")
+	Log.Info("create client")
 	client := &client{clientGroup: clientGroup, tokenId: tokenId, sessionId: sessionId, metadata: metadata, isPub: false, isSub: false}
 	client.send = make(chan interface{})
 	client.recv = make(chan []byte)
