@@ -334,7 +334,7 @@ func (c *client) subscribeNATS() {
 		var msg natsSubscribedMessage
 		err := json.Unmarshal(m.Data, &msg)
 		if err != nil {
-			Log.Warnf("Self NATS json decode error : %w\n",err)
+			Log.Warnf("Self NATS json decode error : %w\n", err)
 		}
 
 		tokenId := msg.TokenId
@@ -377,7 +377,7 @@ func (c *client) subscribeNATS() {
 		var msg natsSubscribedMessage
 		err := json.Unmarshal(m.Data, &msg)
 		if err != nil {
-			Log.Warnf("Session NATS json decode error : %w\n",err)
+			Log.Warnf("Session NATS json decode error : %w\n", err)
 		}
 
 		tokenId := msg.TokenId
@@ -490,7 +490,7 @@ func (c *client) readPump() {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				Log.Warnf("Websocket error: %v", err)
 			} else {
-				Log.Debugf("Websocket closed, error : %v",err)
+				Log.Debugf("Websocket closed, error : %v", err)
 
 				c.selfSub.Unsubscribe()
 				c.sessionSub.Unsubscribe()
@@ -500,12 +500,14 @@ func (c *client) readPump() {
 				if c.isPub {
 					c.requestMedia("close", jsonMap{
 						"transportId": c.pubTransId,
+						"role":        "pub",
 					})
 				}
 
 				if c.isSub {
 					c.requestMedia("close", jsonMap{
 						"transportId": c.subTransId,
+						"role":        "sub",
 					})
 				}
 			}
@@ -532,7 +534,7 @@ func (c *client) writePump() {
 			}
 
 			if err := c.conn.WriteJSON(jsonMsg); err != nil {
-				Log.Warnf("Websocket json send error : %v",err)
+				Log.Warnf("Websocket json send error : %v", err)
 				//TODO:
 			}
 			//w, err := c.conn.NextWriter(websocket.TextMessage)
