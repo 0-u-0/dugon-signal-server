@@ -227,6 +227,7 @@ func (c *client) handleClientMessage(message []byte) {
 			c.requestMedia("pause", jsonMap{
 				"transportId": data["transportId"],
 				"senderId":    data["senderId"],
+				"role":        data["role"],
 			})
 			c.responseClientWithoutData(requestMes.Id)
 			if data["role"].(string) == "pub" {
@@ -238,6 +239,7 @@ func (c *client) handleClientMessage(message []byte) {
 			c.requestMedia("resume", jsonMap{
 				"transportId": data["transportId"],
 				"senderId":    data["senderId"],
+				"role":        data["role"],
 			})
 			c.responseClientWithoutData(requestMes.Id)
 			if data["role"].(string) == "pub" {
