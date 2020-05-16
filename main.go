@@ -6,6 +6,8 @@ import (
 	"log"
 )
 
+var lastCompile string
+
 func main() {
 	defer func() {
 		libs.ReleaseLoggerModule()
@@ -35,6 +37,7 @@ func main() {
 	key := viper.GetString("key")
 	natsUrls := viper.GetStringSlice("nats_urls")
 
+	libs.Log.Infof("Compiled : %s ->", lastCompile)
 	libs.Log.Info("Config ->", viper.AllSettings())
 
 	clientGroup := libs.NewClientGroup(natsUrls)
