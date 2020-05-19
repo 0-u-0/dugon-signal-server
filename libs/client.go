@@ -121,9 +121,13 @@ func (c *client) handleClientMessage(message []byte) {
 		case "join":
 			pub := requestMes.Params.Data["pub"].(bool)
 			sub := requestMes.Params.Data["sub"].(bool)
-			mediaId := requestMes.Params.Data["mediaId"].(string)
-			//FIXME: ...
-			c.selectMediaServer(mediaId)
+
+			if mediaIdAny,ok := requestMes.Params.Data["mediaId"]; ok {
+				mediaId := fmt.Sprintf("%v", mediaIdAny)
+				c.selectMediaServer(mediaId)
+			}else{
+				c.selectMediaServer("")
+			}
 
 			codecData := c.requestMediaNoParams("codecs")
 
