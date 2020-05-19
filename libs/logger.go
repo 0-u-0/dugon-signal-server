@@ -243,7 +243,7 @@ func LoadLoggerModule(logLevel string, toFile bool, logPath, logErrorPath string
 
 	var level LogLevel
 	switch logLevel {
-	case "track":
+	case "trace":
 		level = TRACE
 	case "debug":
 		level = DEBUG

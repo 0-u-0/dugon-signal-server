@@ -111,10 +111,12 @@ func (c *client) handleClientMessage(message []byte) {
 	jsonErr := json.Unmarshal(message, &requestMes)
 	if jsonErr != nil {
 		//TODO(CC):
+		Log.Errorf("Client message json parse error : %v", jsonErr)
 		return
 	}
 
 	//fmt.Println(len(message))
+	Log.Tracef("message : %v", requestMes)
 	if requestMes.Method == "request" {
 		data := requestMes.Params.Data
 		switch requestMes.Params.Event {
@@ -122,10 +124,10 @@ func (c *client) handleClientMessage(message []byte) {
 			pub := requestMes.Params.Data["pub"].(bool)
 			sub := requestMes.Params.Data["sub"].(bool)
 
-			if mediaIdAny,ok := requestMes.Params.Data["mediaId"]; ok {
+			if mediaIdAny, ok := requestMes.Params.Data["mediaId"]; ok {
 				mediaId := fmt.Sprintf("%v", mediaIdAny)
 				c.selectMediaServer(mediaId)
-			}else{
+			} else {
 				c.selectMediaServer("")
 			}
 
