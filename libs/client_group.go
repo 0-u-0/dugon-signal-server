@@ -153,9 +153,9 @@ func (handler wsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		client := newClient(handler.clientGroup, conn, params.TokenId, params.SessionId, params.Metadata)
 		handler.clientGroup.register <- client
 
+		go client.processPump()
 		go client.writePump()
 		go client.readPump()
-		go client.processPump()
 	}
 
 }

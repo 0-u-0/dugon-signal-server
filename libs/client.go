@@ -15,7 +15,7 @@ const (
 	writeWait      = 10 * time.Second
 	pongWait       = 60 * time.Second
 	pingPeriod     = (pongWait * 9) / 10
-	maxMessageSize = 2048 //TODO: adjust
+	maxMessageSize = 10240 //TODO: adjust
 )
 
 type jsonMap = map[string]interface{}
