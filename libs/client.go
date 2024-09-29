@@ -343,7 +343,7 @@ func (c *client) subscribeNATS() {
 		var msg natsSubscribedMessage
 		err := json.Unmarshal(m.Data, &msg)
 		if err != nil {
-			Log.Warnf("Self NATS json decode error : %w\n", err)
+			Log.Warnf("Self NATS json decode error : %v+\n", err)
 		}
 
 		tokenId := msg.TokenId
