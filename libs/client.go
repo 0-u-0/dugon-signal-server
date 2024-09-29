@@ -3,12 +3,13 @@ package libs
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/google/uuid"
-	"github.com/gorilla/websocket"
-	"github.com/nats-io/nats.go"
 	"math/rand"
 	"reflect"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/gorilla/websocket"
+	"github.com/nats-io/nats.go"
 )
 
 const (
@@ -268,8 +269,8 @@ type mediaResponse struct {
 	Data   jsonMap `json:"data"`
 }
 
-//NATS
-//---------------------
+// NATS
+// ---------------------
 func (c *client) publish2Session(method string, data jsonMap) {
 	sessionSubject := fmt.Sprintf("signal.%s.@", c.sessionId)
 
@@ -385,7 +386,7 @@ func (c *client) subscribeNATS() {
 		var msg natsSubscribedMessage
 		err := json.Unmarshal(m.Data, &msg)
 		if err != nil {
-			Log.Warnf("Session NATS json decode error : %w\n", err)
+			Log.Warnf("Session NATS json decode error : %v\n", err)
 		}
 
 		tokenId := msg.TokenId
@@ -563,7 +564,7 @@ func (c *client) writePump() {
 	}
 }
 
-//TODO(CC): add exist
+// TODO(CC): add exist
 func (c *client) processPump() {
 	for {
 		select {
@@ -586,7 +587,7 @@ type requestMessage struct {
 }
 
 func newClient(clientGroup *ClientGroup, conn *websocket.Conn, tokenId string, sessionId string, metadata map[string]string) *client {
-	Log.Info("create client")
+	Log.Infof("create client %s, %s", tokenId, sessionId)
 	client := &client{clientGroup: clientGroup, tokenId: tokenId, sessionId: sessionId, metadata: metadata, isPub: false, isSub: false}
 	client.send = make(chan interface{})
 	client.recv = make(chan []byte)

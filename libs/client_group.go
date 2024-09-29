@@ -4,12 +4,13 @@ import (
 	b64 "encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/websocket"
-	"github.com/nats-io/nats.go"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/gorilla/websocket"
+	"github.com/nats-io/nats.go"
 )
 
 type MediaServer struct {
@@ -124,6 +125,8 @@ func InitWsServer(g *ClientGroup, port int, httpsEnable bool,
 }
 
 func (handler wsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	Log.Info("New Request")
+
 	urlQuery := r.URL.RawQuery
 	values, _ := url.ParseQuery(urlQuery)
 	paramsEncodedArr, ok := values["params"]
@@ -133,7 +136,7 @@ func (handler wsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		err := json.Unmarshal(queryByte, &params)
 		if err != nil {
 			//TODO(CC): response error
-			Log.Warnf("Json decode error : %w\n",err)
+			Log.Warnf("Json decode error : %v+\n", err)
 			return
 		}
 		upgrade := websocket.Upgrader{
@@ -156,6 +159,8 @@ func (handler wsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		go client.processPump()
 		go client.writePump()
 		go client.readPump()
+	} else {
+		Log.Warnf("No params in request")
 	}
 
 }
