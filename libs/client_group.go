@@ -83,7 +83,7 @@ func (g *ClientGroup) Run() {
 			g.clients[client] = true
 		case client := <-g.unregister:
 			if _, ok := g.clients[client]; ok {
-				Log.Debugf("%s client close\n", client.tokenId)
+				Log.Debugf("%s client close\n", client.userId)
 				delete(g.clients, client)
 			}
 		case <-t.C:
@@ -149,11 +149,14 @@ func (handler wsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		conn, err := upgrade.Upgrade(w, r, header)
 
 		if err != nil {
-			Log.Warnf("Websocket err : %w\n", err)
+			Log.Warnf("Websocket err : %v+\n", err)
 			return
 		}
 
-		client := newClient(handler.clientGroup, conn, params.TokenId, params.SessionId, params.Metadata)
+		// TODO(cc): 10/14/24
+		// verify tokenId
+
+		client := newClient(handler.clientGroup, conn, params)
 		handler.clientGroup.register <- client
 
 		go client.processPump()

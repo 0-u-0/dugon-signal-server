@@ -23,7 +23,9 @@ type jsonMap = map[string]interface{}
 
 type client struct {
 	clientGroup *ClientGroup
+	userId      string
 	tokenId     string
+	roomId      string
 	sessionId   string
 	metadata    map[string]string
 	isPub       bool
@@ -40,9 +42,10 @@ type client struct {
 }
 
 type requestParams struct {
-	SessionId string            `json:"sessionId"`
-	TokenId   string            `json:"tokenId"`
-	Metadata  map[string]string `json:"metadata"`
+	RoomId   string            `json:"roomId"`
+	UserId   string            `json:"userId"`
+	TokenId  string            `json:"tokenId"`
+	Metadata map[string]string `json:"metadata"`
 }
 
 //TODO(CC): use random id
@@ -275,29 +278,29 @@ func (c *client) publish2Session(method string, data jsonMap) {
 	sessionSubject := fmt.Sprintf("signal.%s.@", c.sessionId)
 
 	c.clientGroup.nc.Publish(sessionSubject, jsonMap{
-		"tokenId": c.tokenId,
-		"method":  method,
-		"data":    data,
+		"userId": c.userId,
+		"method": method,
+		"data":   data,
 	})
 }
 
-func (c *client) publish2One(tokenId string, method string, data jsonMap) {
-	oneSubject := fmt.Sprintf("signal.%s.%s", c.sessionId, tokenId)
+func (c *client) publish2One(userId string, method string, data jsonMap) {
+	oneSubject := fmt.Sprintf("signal.%s.%s", c.sessionId, userId)
 
 	c.clientGroup.nc.Publish(oneSubject, jsonMap{
-		"tokenId": c.tokenId,
-		"method":  method,
-		"data":    data,
+		"userId": c.userId,
+		"method": method,
+		"data":   data,
 	})
 }
 
 type natsSubscribedMessage struct {
-	TokenId string  `json:"tokenId"`
-	Method  string  `json:"method"`
-	Data    jsonMap `json:"data"`
+	UserId string  `json:"userId"`
+	Method string  `json:"method"`
+	Data   jsonMap `json:"data"`
 }
 
-func (c *client) notifySenders(tokenId string) {
+func (c *client) notifySenders(userId string) {
 
 	sendersData := c.requestMedia("senders", jsonMap{
 		"transportId": c.pubTransId,
@@ -306,7 +309,7 @@ func (c *client) notifySenders(tokenId string) {
 
 	for _, s := range senders {
 		sender := s.(jsonMap)
-		c.publish2One(tokenId, "publish", jsonMap{
+		c.publish2One(userId, "publish", jsonMap{
 			"mediaId":     c.mediaServer.Id,
 			"area":        c.mediaServer.Area,
 			"host":        c.mediaServer.Host,
@@ -317,7 +320,7 @@ func (c *client) notifySenders(tokenId string) {
 	}
 }
 
-func (c *client) notifySender2Client(tokenId string, senderId string, metadata interface{}) {
+func (c *client) notifySender2Client(userId string, senderId string, metadata interface{}) {
 
 	subData := c.requestMedia("subscribe", jsonMap{
 		"transportId": c.subTransId,
@@ -328,14 +331,14 @@ func (c *client) notifySender2Client(tokenId string, senderId string, metadata i
 		"codec":      subData["codec"],
 		"receiverId": subData["receiverId"],
 		"senderId":   senderId,
-		"tokenId":    tokenId,
+		"userId":     userId,
 		"metadata":   metadata,
 	})
 
 }
 
 func (c *client) subscribeNATS() {
-	selfSubject := fmt.Sprintf("signal.%s.%s", c.sessionId, c.tokenId)
+	selfSubject := fmt.Sprintf("signal.%s.%s", c.sessionId, c.userId)
 	//TODO: error
 	selfSub, _ := c.clientGroup.nc.Subscribe(selfSubject, func(m *nats.Msg) {
 		Log.Tracef("Self NATS received a message: %s \n", string(m.Data))
@@ -346,20 +349,20 @@ func (c *client) subscribeNATS() {
 			Log.Warnf("Self NATS json decode error : %v+\n", err)
 		}
 
-		tokenId := msg.TokenId
+		userId := msg.UserId
 		switch msg.Method {
 		case "join":
 			metadata := msg.Data["metadata"]
 			sub := msg.Data["sub"].(bool)
 
 			c.notification("join", jsonMap{
-				"tokenId":  tokenId,
+				"userId":   userId,
 				"metadata": metadata,
 			})
 
 			//FIXME: maybe useless
 			if c.isPub && sub {
-				c.notifySenders(tokenId)
+				c.notifySenders(userId)
 			}
 		case "publish":
 			c.notification("publish", jsonMap{
@@ -369,7 +372,7 @@ func (c *client) subscribeNATS() {
 				"transportId": msg.Data["transportId"],
 				"senderId":    msg.Data["senderId"],
 				"metadata":    msg.Data["metadata"],
-				"tokenId":     tokenId,
+				"userId":      userId,
 			})
 			//c.notifySender2Client(tokenId, senderId, metadata)
 
@@ -389,31 +392,31 @@ func (c *client) subscribeNATS() {
 			Log.Warnf("Session NATS json decode error : %v\n", err)
 		}
 
-		tokenId := msg.TokenId
-		if tokenId != c.tokenId {
+		userId := msg.UserId
+		if userId != c.userId {
 			switch msg.Method {
 			case "join":
 				metadata := msg.Data["metadata"]
 				sub := msg.Data["sub"].(bool)
 
 				c.notification("join", jsonMap{
-					"tokenId":  tokenId,
+					"userId":   userId,
 					"metadata": metadata,
 				})
 
-				c.publish2One(tokenId, "join", jsonMap{
+				c.publish2One(userId, "join", jsonMap{
 					"metadata": c.metadata,
 					"pub":      c.isPub,
 					"sub":      c.isSub,
 				})
 
 				if c.isPub && sub {
-					c.notifySenders(tokenId)
+					c.notifySenders(userId)
 				}
 
 			case "leave":
 				c.notification("leave", jsonMap{
-					"tokenId": tokenId,
+					"userId": userId,
 				})
 			case "publish":
 				c.notification("publish", jsonMap{
@@ -423,13 +426,13 @@ func (c *client) subscribeNATS() {
 					"transportId": msg.Data["transportId"],
 					"senderId":    msg.Data["senderId"],
 					"metadata":    msg.Data["metadata"],
-					"tokenId":     tokenId,
+					"userId":      userId,
 				})
 				//c.notifySender2Client(tokenId, senderId, metadata)
 			case "unpublish":
 				c.notification("unpublish", jsonMap{
 					"senderId": msg.Data["senderId"],
-					"tokenId":  tokenId,
+					"userId":   userId,
 				})
 			case "pause":
 				c.notification("pause", jsonMap{
@@ -586,9 +589,14 @@ type requestMessage struct {
 	} `json:"params"`
 }
 
-func newClient(clientGroup *ClientGroup, conn *websocket.Conn, tokenId string, sessionId string, metadata map[string]string) *client {
-	Log.Infof("create client %s, %s", tokenId, sessionId)
-	client := &client{clientGroup: clientGroup, tokenId: tokenId, sessionId: sessionId, metadata: metadata, isPub: false, isSub: false}
+func newClient(clientGroup *ClientGroup, conn *websocket.Conn, parameters requestParams) *client {
+	// tokenId string, sessionId string, metadata map[string]string
+	Log.Infof("create client %s, %s", parameters.RoomId, parameters.UserId)
+	client := &client{clientGroup: clientGroup,
+		userId: parameters.UserId, tokenId: parameters.TokenId,
+		roomId: parameters.RoomId, sessionId: parameters.RoomId,
+		metadata: parameters.Metadata,
+		isPub:    false, isSub: false}
 	client.send = make(chan interface{})
 	client.recv = make(chan []byte)
 	client.conn = conn
