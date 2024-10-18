@@ -223,9 +223,9 @@ func (c *client) handleClientMessage(message []byte) {
 			})
 
 			c.responseClient(requestMes.Id, jsonMap{
-				"codec":       subData["codec"],
-				"receiverId":  subData["receiverId"],
-				"publisherId": data["publisherId"],
+				"codec":        subData["codec"],
+				"subscriberId": subData["subscriberId"],
+				"publisherId":  data["publisherId"],
 			})
 		case "unsubscribe":
 			c.requestMedia("unsubscribe", jsonMap{
