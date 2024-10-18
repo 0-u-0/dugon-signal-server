@@ -192,7 +192,7 @@ func (c *client) handleClientMessage(message []byte) {
 				"metadata":    requestMes.Params.Data["metadata"],
 			})
 			c.responseClient(requestMes.Id, jsonMap{
-				"senderId": senderData["senderId"],
+				"publisherId": senderData["senderId"],
 			})
 
 			c.publish2Session("publish", jsonMap{
@@ -200,18 +200,18 @@ func (c *client) handleClientMessage(message []byte) {
 				"area":        c.mediaServer.Area,
 				"host":        c.mediaServer.Host,
 				"transportId": c.pubTransId,
-				"senderId":    senderData["senderId"],
+				"publisherId": senderData["senderId"],
 				"metadata":    requestMes.Params.Data["metadata"],
 			})
 		case "unpublish":
 			c.requestMedia("unpublish", jsonMap{
 				"transportId": data["transportId"],
-				"senderId":    data["senderId"],
+				"senderId":    data["publisherId"],
 			})
 			c.responseClientWithoutData(requestMes.Id)
 
 			c.publish2Session("unpublish", jsonMap{
-				"senderId": data["senderId"],
+				"publisherId": data["publisherId"],
 			})
 		case "subscribe":
 
@@ -219,42 +219,42 @@ func (c *client) handleClientMessage(message []byte) {
 				"mediaId":           data["mediaId"],
 				"remoteTransportId": data["transportId"],
 				"transportId":       c.subTransId,
-				"senderId":          data["senderId"],
+				"senderId":          data["publisherId"],
 			})
 
 			c.responseClient(requestMes.Id, jsonMap{
-				"codec":      subData["codec"],
-				"receiverId": subData["receiverId"],
-				"senderId":   data["senderId"],
+				"codec":       subData["codec"],
+				"receiverId":  subData["receiverId"],
+				"publisherId": data["publisherId"],
 			})
 		case "unsubscribe":
 			c.requestMedia("unsubscribe", jsonMap{
 				"transportId": data["transportId"],
-				"senderId":    data["senderId"],
+				"senderId":    data["publisherId"],
 			})
 			c.responseClientWithoutData(requestMes.Id)
 		case "pause":
 			c.requestMedia("pause", jsonMap{
 				"transportId": data["transportId"],
-				"senderId":    data["senderId"],
+				"senderId":    data["publisherId"],
 				"role":        data["role"],
 			})
 			c.responseClientWithoutData(requestMes.Id)
 			if data["role"].(string) == "pub" {
 				c.publish2Session("pause", jsonMap{
-					"senderId": data["senderId"],
+					"publisherId": data["publisherId"],
 				})
 			}
 		case "resume":
 			c.requestMedia("resume", jsonMap{
 				"transportId": data["transportId"],
-				"senderId":    data["senderId"],
+				"senderId":    data["publisherId"],
 				"role":        data["role"],
 			})
 			c.responseClientWithoutData(requestMes.Id)
 			if data["role"].(string) == "pub" {
 				c.publish2Session("resume", jsonMap{
-					"senderId": data["senderId"],
+					"publisherId": data["publisherId"],
 				})
 			}
 		}
@@ -314,28 +314,28 @@ func (c *client) notifySenders(userId string) {
 			"area":        c.mediaServer.Area,
 			"host":        c.mediaServer.Host,
 			"transportId": c.pubTransId,
-			"senderId":    sender["id"],
+			"publisherId": sender["id"],
 			"metadata":    sender["metadata"],
 		})
 	}
 }
 
-func (c *client) notifySender2Client(userId string, senderId string, metadata interface{}) {
+// func (c *client) notifySender2Client(userId string, senderId string, metadata interface{}) {
 
-	subData := c.requestMedia("subscribe", jsonMap{
-		"transportId": c.subTransId,
-		"senderId":    senderId,
-	})
+// 	subData := c.requestMedia("subscribe", jsonMap{
+// 		"transportId": c.subTransId,
+// 		"senderId":    senderId,
+// 	})
 
-	c.notification("publish", jsonMap{
-		"codec":      subData["codec"],
-		"receiverId": subData["receiverId"],
-		"senderId":   senderId,
-		"userId":     userId,
-		"metadata":   metadata,
-	})
+// 	c.notification("publish", jsonMap{
+// 		"codec":      subData["codec"],
+// 		"receiverId": subData["receiverId"],
+// 		"senderId":   senderId,
+// 		"userId":     userId,
+// 		"metadata":   metadata,
+// 	})
 
-}
+// }
 
 func (c *client) subscribeNATS() {
 	selfSubject := fmt.Sprintf("signal.%s.%s", c.sessionId, c.userId)
@@ -370,7 +370,7 @@ func (c *client) subscribeNATS() {
 				"area":        msg.Data["area"],
 				"host":        msg.Data["host"],
 				"transportId": msg.Data["transportId"],
-				"senderId":    msg.Data["senderId"],
+				"publisherId": msg.Data["publisherId"],
 				"metadata":    msg.Data["metadata"],
 				"userId":      userId,
 			})
@@ -424,23 +424,23 @@ func (c *client) subscribeNATS() {
 					"area":        msg.Data["area"],
 					"host":        msg.Data["host"],
 					"transportId": msg.Data["transportId"],
-					"senderId":    msg.Data["senderId"],
+					"publisherId": msg.Data["publisherId"],
 					"metadata":    msg.Data["metadata"],
 					"userId":      userId,
 				})
 				//c.notifySender2Client(tokenId, senderId, metadata)
 			case "unpublish":
 				c.notification("unpublish", jsonMap{
-					"senderId": msg.Data["senderId"],
-					"userId":   userId,
+					"publisherId": msg.Data["publisherId"],
+					"userId":      userId,
 				})
 			case "pause":
 				c.notification("pause", jsonMap{
-					"senderId": msg.Data["senderId"],
+					"publisherId": msg.Data["publisherId"],
 				})
 			case "resume":
 				c.notification("resume", jsonMap{
-					"senderId": msg.Data["senderId"],
+					"publisherId": msg.Data["publisherId"],
 				})
 			}
 		}
