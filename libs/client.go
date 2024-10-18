@@ -230,13 +230,13 @@ func (c *client) handleClientMessage(message []byte) {
 		case "unsubscribe":
 			c.requestMedia("unsubscribe", jsonMap{
 				"transportId": data["transportId"],
-				"senderId":    data["publisherId"],
+				"publisherId": data["publisherId"],
 			})
 			c.responseClientWithoutData(requestMes.Id)
 		case "pause":
 			c.requestMedia("pause", jsonMap{
 				"transportId": data["transportId"],
-				"senderId":    data["publisherId"],
+				"publisherId": data["publisherId"],
 				"role":        data["role"],
 			})
 			c.responseClientWithoutData(requestMes.Id)
@@ -248,7 +248,7 @@ func (c *client) handleClientMessage(message []byte) {
 		case "resume":
 			c.requestMedia("resume", jsonMap{
 				"transportId": data["transportId"],
-				"senderId":    data["publisherId"],
+				"publisherId": data["publisherId"],
 				"role":        data["role"],
 			})
 			c.responseClientWithoutData(requestMes.Id)
