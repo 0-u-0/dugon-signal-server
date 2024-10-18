@@ -192,7 +192,7 @@ func (c *client) handleClientMessage(message []byte) {
 				"metadata":    requestMes.Params.Data["metadata"],
 			})
 			c.responseClient(requestMes.Id, jsonMap{
-				"publisherId": senderData["senderId"],
+				"publisherId": senderData["publisherId"],
 			})
 
 			c.publish2Session("publish", jsonMap{
@@ -200,13 +200,13 @@ func (c *client) handleClientMessage(message []byte) {
 				"area":        c.mediaServer.Area,
 				"host":        c.mediaServer.Host,
 				"transportId": c.pubTransId,
-				"publisherId": senderData["senderId"],
+				"publisherId": senderData["publisherId"],
 				"metadata":    requestMes.Params.Data["metadata"],
 			})
 		case "unpublish":
 			c.requestMedia("unpublish", jsonMap{
 				"transportId": data["transportId"],
-				"senderId":    data["publisherId"],
+				"publisherId": data["publisherId"],
 			})
 			c.responseClientWithoutData(requestMes.Id)
 
@@ -219,7 +219,7 @@ func (c *client) handleClientMessage(message []byte) {
 				"mediaId":           data["mediaId"],
 				"remoteTransportId": data["transportId"],
 				"transportId":       c.subTransId,
-				"senderId":          data["publisherId"],
+				"publisherId":       data["publisherId"],
 			})
 
 			c.responseClient(requestMes.Id, jsonMap{
@@ -300,22 +300,22 @@ type natsSubscribedMessage struct {
 	Data   jsonMap `json:"data"`
 }
 
-func (c *client) notifySenders(userId string) {
+func (c *client) notifyPubs(userId string) {
 
-	sendersData := c.requestMedia("senders", jsonMap{
+	pubsData := c.requestMedia("pubs", jsonMap{
 		"transportId": c.pubTransId,
 	})
-	senders := sendersData["senders"].([]interface{})
+	publishers := pubsData["publishers"].([]interface{})
 
-	for _, s := range senders {
-		sender := s.(jsonMap)
+	for _, p := range publishers {
+		publisher := p.(jsonMap)
 		c.publish2One(userId, "publish", jsonMap{
 			"mediaId":     c.mediaServer.Id,
 			"area":        c.mediaServer.Area,
 			"host":        c.mediaServer.Host,
 			"transportId": c.pubTransId,
-			"publisherId": sender["id"],
-			"metadata":    sender["metadata"],
+			"publisherId": publisher["id"],
+			"metadata":    publisher["metadata"],
 		})
 	}
 }
@@ -362,7 +362,7 @@ func (c *client) subscribeNATS() {
 
 			//FIXME: maybe useless
 			if c.isPub && sub {
-				c.notifySenders(userId)
+				c.notifyPubs(userId)
 			}
 		case "publish":
 			c.notification("publish", jsonMap{
@@ -411,7 +411,7 @@ func (c *client) subscribeNATS() {
 				})
 
 				if c.isPub && sub {
-					c.notifySenders(userId)
+					c.notifyPubs(userId)
 				}
 
 			case "leave":
