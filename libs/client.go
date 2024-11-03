@@ -62,23 +62,22 @@ type requestParams struct {
 //	}
 //}
 
-func (c *client) responseClient(id int, params interface{}) {
+func (c *client) responseClient(id int, data interface{}) {
 	response := jsonMap{
-		"method": "response",
-		"id":     id,
-		"params": params,
+		"response": true,
+		"id":       id,
+		"ok":       true,
+		"data":     data,
 	}
 	c.send <- response
 	//c.sendJson(response)
 }
 
-func (c *client) notification(event string, data interface{}) {
+func (c *client) notification(method string, data interface{}) {
 	response := jsonMap{
-		"method": "notification",
-		"params": jsonMap{
-			"event": event,
-			"data":  data,
-		},
+		"notification ": true,
+		"method":        method,
+		"data":          data,
 	}
 	//c.sendJson(response)
 	c.send <- response
