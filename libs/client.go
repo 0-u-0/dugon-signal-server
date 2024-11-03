@@ -111,7 +111,7 @@ func (c *client) selectMediaServer(mediaId string) {
 }
 
 func (c *client) handleClientMessage(message []byte) {
-	var requestMes *requestMessage
+	var requestMes *ClientRequest
 	jsonErr := json.Unmarshal(message, &requestMes)
 	if jsonErr != nil {
 		//TODO(CC):
@@ -121,14 +121,14 @@ func (c *client) handleClientMessage(message []byte) {
 
 	//fmt.Println(len(message))
 	Log.Tracef("message : %v", requestMes)
-	if requestMes.Method == "request" {
-		data := requestMes.Params.Data
-		switch requestMes.Params.Event {
+	if requestMes.Request {
+		data := requestMes.Data
+		switch requestMes.Method {
 		case "join":
-			pub := requestMes.Params.Data["pub"].(bool)
-			sub := requestMes.Params.Data["sub"].(bool)
+			pub := requestMes.Data["pub"].(bool)
+			sub := requestMes.Data["sub"].(bool)
 
-			if mediaIdAny, ok := requestMes.Params.Data["mediaId"]; ok {
+			if mediaIdAny, ok := requestMes.Data["mediaId"]; ok {
 				mediaId := fmt.Sprintf("%v", mediaIdAny)
 				c.selectMediaServer(mediaId)
 			} else {
@@ -181,15 +181,15 @@ func (c *client) handleClientMessage(message []byte) {
 
 		case "dtls":
 			c.requestMedia("dtls", jsonMap{
-				"transportId":    requestMes.Params.Data["transportId"],
-				"dtlsParameters": requestMes.Params.Data["dtlsParameters"],
+				"transportId":    requestMes.Data["transportId"],
+				"dtlsParameters": requestMes.Data["dtlsParameters"],
 			})
 			c.responseClientWithoutData(requestMes.Id)
 		case "publish":
 			senderData := c.requestMedia("publish", jsonMap{
-				"transportId": requestMes.Params.Data["transportId"],
-				"codec":       requestMes.Params.Data["codec"],
-				"metadata":    requestMes.Params.Data["metadata"],
+				"transportId": requestMes.Data["transportId"],
+				"codec":       requestMes.Data["codec"],
+				"metadata":    requestMes.Data["metadata"],
 			})
 			c.responseClient(requestMes.Id, jsonMap{
 				"publisherId": senderData["publisherId"],
@@ -201,7 +201,7 @@ func (c *client) handleClientMessage(message []byte) {
 				"host":        c.mediaServer.Host,
 				"transportId": c.pubTransId,
 				"publisherId": senderData["publisherId"],
-				"metadata":    requestMes.Params.Data["metadata"],
+				"metadata":    requestMes.Data["metadata"],
 			})
 		case "unpublish":
 			c.requestMedia("unpublish", jsonMap{
@@ -580,13 +580,11 @@ func (c *client) processPump() {
 	}
 }
 
-type requestMessage struct {
-	Id     int    `json:"id"`
-	Method string `json:"method"`
-	Params struct {
-		Event string  `json:"event"`
-		Data  jsonMap `json:"data"`
-	} `json:"params"`
+type ClientRequest struct {
+	Request bool    `json:"request"`
+	Id      int     `json:"id"`
+	Method  string  `json:"method"`
+	Data    jsonMap `json:"data"`
 }
 
 func newClient(clientGroup *ClientGroup, conn *websocket.Conn, parameters requestParams) *client {
