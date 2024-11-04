@@ -75,9 +75,9 @@ func (c *client) responseClient(id int, data interface{}) {
 
 func (c *client) notification(method string, data interface{}) {
 	response := jsonMap{
-		"notification ": true,
-		"method":        method,
-		"data":          data,
+		"notification": true,
+		"method":       method,
+		"data":         data,
 	}
 	//c.sendJson(response)
 	c.send <- response
