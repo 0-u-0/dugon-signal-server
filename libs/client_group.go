@@ -44,11 +44,11 @@ func NewClientGroup(natsUrls []string) *ClientGroup {
 	//FIXME: add reconnect
 	nc, err := nats.Connect(natsUrl)
 	if err != nil {
-		Log.Fatalf("Nat connect error  %w\n", err)
+		Log.Fatalf("Nat connect error  %v+\n", err)
 	}
 	c, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER)
 	if err != nil {
-		Log.Fatalf("Nat json connect error  %w\n", err)
+		Log.Fatalf("Nat json connect error  %v+\n", err)
 	}
 	g.nc = c
 
@@ -57,7 +57,7 @@ func NewClientGroup(natsUrls []string) *ClientGroup {
 		var info = &MediaServer{}
 		err := json.Unmarshal(m.Data, info)
 		if err != nil {
-			Log.Warnf("Heartbeat json decode error : %w\n", err)
+			Log.Warnf("Heartbeat json decode error : %v+\n", err)
 		}
 
 		if media, ok := g.mediaServers[info.Id]; ok {

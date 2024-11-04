@@ -568,14 +568,8 @@ func (c *client) writePump() {
 
 // TODO(CC): add exist
 func (c *client) processPump() {
-	for {
-		select {
-		case message, ok := <-c.recv: //TODO: move this case to a single select
-			if !ok {
-				//TODO(CC):
-			}
-			c.handleClientMessage(message)
-		}
+	for message := range c.recv {
+		c.handleClientMessage(message)
 	}
 }
 
