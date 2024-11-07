@@ -1,12 +1,17 @@
 package main
 
 import (
+	"log"
+
 	"github.com/0-u-0/dugon-signal-server/libs"
 	"github.com/spf13/viper"
-	"log"
 )
 
-var lastCompile string
+var (
+	version   string
+	commit    string
+	buildTime string
+)
 
 func main() {
 	defer func() {
@@ -37,7 +42,7 @@ func main() {
 	key := viper.GetString("key")
 	natsUrls := viper.GetStringSlice("nats_urls")
 
-	libs.Log.Infof("Compiled : %s ->", lastCompile)
+	libs.Log.Infof("Version: %s, build time: %s, commit: %s", version, buildTime, commit)
 	libs.Log.Info("Config ->", viper.AllSettings())
 
 	clientGroup := libs.NewClientGroup(natsUrls)
